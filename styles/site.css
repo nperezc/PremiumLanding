@@ -1316,13 +1316,13 @@
       }
 
       .knob-float {
-        /* posado sobre la esquina inferior derecha de la foto, igual que el
-           knob del EcoTour sobre la suya (10u de margen interior): estructura
-           espejada entre ambas cards. El transform-origin sigue apuntando al
+        /* posado sobre la esquina inferior derecha de la foto (ahora
+           centrada: borde inferior en 1050+200=1250u), mismo margen de 10u
+           que el knob del EcoTour sobre la suya. transform-origin apunta al
            centro de la card (380, 1175) para que el parallax no la separe. */
         left: calc(646 * var(--u));
-        top: calc(1152 * var(--u));
-        transform-origin: calc(-266 * var(--u)) calc(23 * var(--u));
+        top: calc(1186 * var(--u));
+        transform-origin: calc(-266 * var(--u)) calc(-11 * var(--u));
       }
 
       .knob--about {
@@ -1417,12 +1417,14 @@
         z-index: 4;
       }
 
+      /* contenido centrado verticalmente en la card (foto, texto y knob
+         como en EcoTour): foto 150u en 250u → top (250−150)/2 = 50u */
       .card--about .label {
-        top: calc(96 * var(--u));
+        top: calc(75 * var(--u));
       }
 
       .card--about h2 {
-        top: calc(124 * var(--u));
+        top: calc(103 * var(--u));
         /* el left base (38u) es en espacio de la card: la ventana empieza
            en 376u (card) → 38+328=366u deja ~10u de aire antes de la foto */
         width: calc(328 * var(--u));
@@ -1437,7 +1439,13 @@
         height: calc(268 * var(--u));
       }
 
+      .card--stove .label {
+        /* grupo texto (label+h2 ≈ 61u) centrado en 268u → top 104u */
+        top: calc(104 * var(--u));
+      }
+
       .card--stove h2 {
+        top: calc(129 * var(--u));
         font-size: calc(32 * var(--u));
       }
 
@@ -1446,7 +1454,9 @@
       .card--stove figure {
         left: auto;
         right: calc(16 * var(--u));
-        bottom: calc(16 * var(--u));
+        /* centrada: (268−150)/2 = 59u arriba y abajo */
+        top: calc(59 * var(--u));
+        bottom: auto;
         width: calc(300 * var(--u));
         height: calc(150 * var(--u));
       }
@@ -1454,10 +1464,9 @@
       .card--about figure {
         left: auto;
         right: calc(16 * var(--u));
-        top: calc(16 * var(--u));
-        /* misma ventana que la del EcoTour (300×150u): ambas cards con foto
-           de proporción idéntica — antes esta era casi cuadrada (224×218u).
-           El h2 (34+360=394u) no invade: la ventana empieza en 444u. */
+        /* misma ventana que la del EcoTour (300×150u), centrada:
+           (250−150)/2 = 50u — antes era casi cuadrada y top-anclada */
+        top: calc(50 * var(--u));
         width: calc(300 * var(--u));
         height: calc(150 * var(--u));
       }
@@ -1469,7 +1478,9 @@
 
       .card--stove .knob {
         right: calc(30 * var(--u));
-        bottom: calc(30 * var(--u));
+        /* la foto subió al centro (borde inferior en 268−59=209u):
+           el knob la sigue con su mismo margen interior de 14u */
+        bottom: calc(73 * var(--u));
       }
 
       .scroll {
