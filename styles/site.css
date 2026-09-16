@@ -1316,9 +1316,19 @@
       }
 
       .knob-float {
-        left: calc(644 * var(--u));
-        top: calc(1218 * var(--u));
-        transform-origin: calc(-264 * var(--u)) calc(-43 * var(--u));
+        /* posado sobre la esquina inferior derecha de la foto, igual que el
+           knob del EcoTour sobre la suya (10u de margen interior): estructura
+           espejada entre ambas cards. El transform-origin sigue apuntando al
+           centro de la card (380, 1175) para que el parallax no la separe. */
+        left: calc(646 * var(--u));
+        top: calc(1152 * var(--u));
+        transform-origin: calc(-266 * var(--u)) calc(23 * var(--u));
+      }
+
+      .knob--about {
+        /* mismo tamaño que el knob del EcoTour en móvil (54u) */
+        width: calc(54 * var(--u));
+        height: calc(54 * var(--u));
       }
 
       .headline {
