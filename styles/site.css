@@ -1281,6 +1281,11 @@
        12px targets on a phone. The floor only bites at the small end. */
       .dock-wrap {
         top: calc(30 * var(--u));
+        /* 100vw en vez del span left/right: con scrollbar clásico el
+           containing block mide viewport−scrollbar y la cápsula queda
+           descentrada respecto al ancho VISUAL del teléfono. 100vw incluye
+           la barra, así que el centrado cae en el centro real siempre. */
+        width: 100vw;
       }
       .dock {
         height: max(56px, calc(58 * var(--u)));
@@ -1318,9 +1323,18 @@
 
       .headline {
         left: calc(34 * var(--u));
-        top: calc(128 * var(--u));
-        font-size: calc(62 * var(--u));
-        line-height: calc(66 * var(--u));
+        /* despejado del dock flotante (top 30u + alto ~58u + aire) — el
+           título empezaba a 128u y montaba sobre la nav en móvil */
+        top: calc(170 * var(--u));
+        /* una sola línea: spans en inline + nowrap + tamaño calibrado para
+           caber desde 320px (verificado a 320/390/844 de ancho) */
+        font-size: calc(52 * var(--u));
+        line-height: calc(56 * var(--u));
+        white-space: nowrap;
+      }
+
+      .headline span {
+        display: inline;
       }
 
       .lede {
@@ -1808,6 +1822,18 @@
         padding: calc(96 * var(--u)) 0 calc(120 * var(--u));
       }
 
+      /* bloque: en la variante flip (Nevado) el DOM trae la imagen primero,
+         pero el orden de lectura en teléfono es texto arriba (centrado) y
+         foto abajo. Grid-row reordena sin tocar el DOM ni el sizing:
+         en flex-column el aspect-ratio de la figura colapsa a 0 (sin
+         contenido en flujo no hay tamaño principal). */
+      .story--flip .story-inner {
+        grid-template-columns: 1fr;
+      }
+      .story--flip .story-inner figure.par-story {
+        grid-row: 2;
+      }
+
       .story h2 {
         font-size: calc(44 * var(--u))!important;
         line-height: calc(48 * var(--u))!important;
@@ -1866,6 +1892,24 @@
       border-radius: calc(34 * var(--u));
       box-shadow: 0 calc(8 * var(--u)) calc(32 * var(--u)) rgba(0, 0, 0, .25);
       padding: calc(40 * var(--u)) calc(44 * var(--u));
+    }
+
+    /* móvil: backdrop-filter en scroll es el mayor coste de GPU del sitio
+       (re-muestrea y difumina el fondo en cada frame compuesto). En phone
+       se sustituye por fondos más opacos — mismo vidrio percibido, scroll
+       fluido, y el contraste del texto MEJORA. */
+    @media (max-width:900px) {
+      .story-about,
+      .story--glass .glass-card {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+      .story-about {
+        background: rgba(24, 28, 20, .62);
+      }
+      .story--glass .glass-card {
+        background: linear-gradient(165deg, rgba(30, 40, 35, .6), rgba(20, 20, 20, .5));
+      }
     }
 
     /* badge pill: borde sutil, uppercase con tracking amplio */

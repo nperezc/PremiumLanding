@@ -34,6 +34,8 @@
       var heroEl = document.getElementById('hero');
       var lastX = null, lastY = null;
       var ticking = false, parOn = false;
+      /* visibilidad del hero para el loop de render (IO abajo) */
+      var heroVisible = true;
       /* las secciones story publican el mismo --px/--py del hero: el CSS
          de .story .par los consume igual (parallax de puntero abajo del hero) */
       var storyEls = [].slice.call(document.querySelectorAll('.story'));
@@ -72,11 +74,22 @@
             }
           }
         }
-        if (renderer && clock) renderFrame();
+        /* el render GL solo corre con el hero en pantalla: es la única parte
+           que redibuja cada frame; scrolleado a las secciones story el loop
+           queda en repo (el IO restaura al volver arriba) */
+        if (renderer && clock && heroVisible) renderFrame();
       }
 
       function startParallax() {
         startTick();
+        /* pausa de render con el hero fuera de pantalla: el costo del GL es
+           por frame aunque pinte lo mismo; en móvil es LA diferencia entre
+           scroll fluido y pesado en las secciones de abajo */
+        if ('IntersectionObserver' in window && heroEl) {
+          new IntersectionObserver(function (entries) {
+            heroVisible = entries[0].isIntersecting;
+          }, { rootMargin: '10% 0px' }).observe(heroEl);
+        }
         if (REDUCED || parOn) return;
         parOn = true;
         var nodes = document.querySelectorAll(PARALLAX);
@@ -1699,7 +1712,7 @@
 
         renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: !small });
         renderer.setClearColor(0x000000, 0);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.6 : 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, small ? 1.35 : 2));
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.30;
         if ('sRGBEncoding' in THREE) renderer.outputEncoding = THREE.sRGBEncoding;
