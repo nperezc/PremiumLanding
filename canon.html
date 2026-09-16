@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cañón del Combeima — Majestuosidad Andina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/canon.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div class="stage">
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand fade d1" href="#">El Cañón</a>
+      <ul class="links fade d1">
+        <li><a href="#">Inicio</a></li>
+        <li><a href="#">Rutas</a></li>
+        <li><a href="#">Ríos</a></li>
+        <li><a href="#">Fauna</a></li>
+        <li><a href="#">Guías</a></li>
+      </ul>
+      <a class="cta fade d1" href="#">Visitar</a>
+    </div>
+  </header>
+
+  <main class="hero">
+    <h1 class="fade d2">Desde las altas cumbres hasta el río,<br>un paraíso natural inolvidable.</h1>
+    <p class="sub fade d3">Descubre la inmensidad del Cañón del Combeima y su ecosistema.</p>
+    <div class="actions fade d4">
+      <a class="btn btn-solid" href="#">Ver el paisaje</a>
+      <a class="btn btn-ghost" href="#">Explorar rutas <span class="arw">&#8594;</span></a>
+    </div>
+  </main>
+</div>
+
+<script src="inner-green-assets/canon-three/three.min.js"></script>
+<script src="inner-green-assets/canon-three/CopyShader.js"></script>
+<script src="inner-green-assets/canon-three/LuminosityHighPassShader.js"></script>
+<script src="inner-green-assets/canon-three/EffectComposer.js"></script>
+<script src="inner-green-assets/canon-three/RenderPass.js"></script>
+<script src="inner-green-assets/canon-three/ShaderPass.js"></script>
+<script src="inner-green-assets/canon-three/UnrealBloomPass.js"></script>
+<script src="js/canon-scene.js"></script>
+</body>
+</html>

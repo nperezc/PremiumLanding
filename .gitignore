@@ -1,0 +1,38 @@
+# ── Artefactos de deploy (no versionar) ──────────────────────────────
+*.zip
+/ibague-adentrate-vercel/
+
+# Video original de edición (el sitio usa las variantes optimizadas
+# H.264 + AV1 que están en inner-green-assets/)
+/ibague-adentrate-original.mp4
+
+# ── Imágenes fuente de la raíz (los archivos de producción viven en
+#    inner-green-assets/ con nombres y formatos optimizados) ──────────
+/alto el oso.jpg
+/arbolHojas (2).png
+/cascada la plata.webp
+/colibri.png
+/ibague.svg
+/musgofdo.jpg
+/nevado del tolima.jpg
+/seccion 2.jpg
+/telesferico hacienda primavera.png
+/termales el rancho.jpg
+
+# ── Fuentes sin usar dentro de assets (existen versiones .webp que
+#    el sitio sí referencia; los .png originales solo engordan el repo) ─
+/inner-green-assets/colibri.png
+/inner-green-assets/telesferico_hacienda_primavera.png
+/inner-green-assets/vistar right.png
+
+# ── Backups y archivos históricos ────────────────────────────────────
+/index - Back.html
+/archive/
+
+# ── Herramientas internas del agente (memoria, logs, run docs) ──────
+.freebuff/
+
+# ── Basura de sistema operativo y editores ───────────────────────────
+Thumbs.db
+.DS_Store
+desktop.ini

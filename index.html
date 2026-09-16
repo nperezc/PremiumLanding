@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ibagué — Hacia el mundo vivo</title>
+  <meta name="description"
+    content="Descubre el encanto ecoturístico de Ibagué, Tolima. Un paraíso natural lleno de cascadas, montañas y biodiversidad.">
+  <meta name="theme-color" content="#0d120e">
+
+  <!-- Open Graph / Twitter: al tener el dominio final, antepónlo a
+       content="/inner-green-assets/..." (los crawlers de Facebook/WhatsApp
+       exigen URL absoluta en og:image). -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Ibagué — Hacia el mundo vivo">
+  <meta property="og:locale" content="es_CO">
+  <meta property="og:title" content="Ibagué — Hacia el mundo vivo">
+  <meta property="og:description"
+    content="Descubre el encanto ecoturístico de Ibagué, Tolima. Un paraíso natural lleno de cascadas, montañas y biodiversidad.">
+  <meta property="og:image" content="/inner-green-assets/canyon-combeima.jpg">
+  <meta property="og:image:width" content="1600">
+  <meta property="og:image:height" content="1200">
+  <meta property="og:image:alt" content="Cañón del Combeima al atardecer, Ibagué — Tolima">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ibagué — Hacia el mundo vivo">
+  <meta name="twitter:description"
+    content="Descubre el encanto ecoturístico de Ibagué, Tolima. Un paraíso natural lleno de cascadas, montañas y biodiversidad.">
+  <meta name="twitter:image" content="/inner-green-assets/canyon-combeima.jpg">
+
+  <link rel="icon" type="image/svg+xml" href="inner-green-assets/ibague.svg">
+  <script>document.documentElement.className += " js";</script>
+  <link rel="stylesheet" href="styles/site.css?v=11">
+</head>
+
+<body>
+
+  <!-- Persistent nav: fixed (no transform/filter/filter animations on it —
+       see story.js depth), so it survives the hero and rides above the story
+       sections. Active state is scroll-driven (js/nav-spy.js), not hardcoded. -->
+  <div class="dock-wrap">
+    <nav class="dock par-dock" style="--pd:5" data-spec aria-label="Primary">
+        <a class="dock-item dock-mark" data-dock data-spec data-burst href="#hero" style="--d:120ms"
+          aria-label="Ibagué — inicio">
+          <img src="inner-green-assets/ibague.svg" alt="" width="129.5" height="122" decoding="async">
+        </a>
+        <!-- sin is-active en el marcado: el scroll-spy es el dueño del estado -->
+        <a class="dock-item" data-dock data-spec data-burst href="#combeima" style="--d:180ms">
+          <span class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16">
+              <path d="M8 14V9" />
+              <path d="M8 9c0-2.4 1.7-4.3 4-4.3.2 2.6-1.6 4.6-4 4.3Z" />
+              <path d="M8 10.5C7.9 8.4 6.4 6.8 4.4 6.8 4.3 8.9 5.9 10.6 8 10.5Z" />
+            </svg>
+          </span>
+          <span>Cañón</span>
+        </a>
+        <a class="dock-item" data-dock data-spec data-burst href="#nevado" style="--d:230ms">
+          <span class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16">
+              <path d="M1.6 12.4c2.4-3.4 4.3-5.1 5.7-5.1 2 0 3 3.6 5 3.6 1.1 0 1.9-.5 2.4-1.4" />
+              <path d="M4.3 6.2C5.5 4.4 6.6 3.5 7.6 3.5c1.5 0 2.2 2.4 3.7 2.4" />
+            </svg>
+          </span>
+          <span>Nevado</span>
+        </a>
+        <a class="dock-item" data-dock data-spec data-burst href="#rutas" style="--d:280ms">
+          <span class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16">
+              <path d="M4 2.4h5.3L12 5.1v8.5H4z" />
+              <path d="M9.2 2.4V5h2.7" />
+              <path d="M6 8.4h4M6 10.8h2.8" />
+            </svg>
+          </span>
+          <span>Rutas</span>
+        </a>
+        <a class="dock-item dock-item--enter" data-dock data-spec data-burst href="#visitar" style="--d:330ms">
+          <span class="glyph" aria-hidden="true">
+            <svg viewBox="0 0 16 16">
+              <path d="M6.6 2.5h5.1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6.6" />
+              <path d="M2.6 8h6.6" />
+              <path d="m7 5.6 2.4 2.4L7 10.4" />
+            </svg>
+          </span>
+          <span>Visitar</span>
+        </a>
+    </nav>
+  </div>
+
+  <main class="hero" id="hero">
+    <canvas id="scene"></canvas>
+
+    <div class="stage" id="stage">
+
+      <div class="guides fade" style="--d:900ms" aria-hidden="true">
+        <i style="left:calc(405 * var(--u))"></i>
+        <i style="left:calc(748 * var(--u))"></i>
+        <i style="left:calc(1091 * var(--u))"></i>
+      </div>
+
+      <div class="ghost fade" style="--d:1150ms" aria-hidden="true">IBAGUÉ</div>
+
+      <!-- card 1 sits *behind* the canvas so the moss drapes over its shoulder -->
+      <article class="card card--about mask" style="--d:760ms; --pd:10; --pr:2.2">
+        <figure class="portal" data-delay="920">
+          <span class="portal-media"><img src="inner-green-assets/card-ethos.jpg"
+              alt="A cushion of moss grown over lichen-crusted stones" loading="eager" decoding="async"></span>
+          <canvas class="pixel-reveal" aria-hidden="true"></canvas>
+        </figure>
+        <p class="label">Nuestra Esencia</p>
+        <h2>Deja que la naturaleza te guíe.</h2>
+      </article>
+
+      <!-- the About knob rides *outside* the card: the card has to stay a plain
+         painted box under #scene, so anything that must sit in front of the
+         moss lives here instead, sharing the card's parallax origin -->
+      <span class="knob-float" style="--pd:10; --pr:2.2">
+        <a class="knob knob--about mask-circle" style="--d:1100ms" href="#rutas" aria-label="Ir a la sección Rutas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M12 21v-7" />
+            <path d="M12 14c0-3.3 2.4-6 5.5-6 .3 3.6-2.2 6.4-5.5 6Z" />
+            <path d="M12 16c-.1-2.9-2.2-5.2-4.9-5.2C6.8 13.7 9 16 12 16Z" />
+          </svg>
+        </a>
+      </span>
+
+      <h1 class="headline" style="--pd:18; --pr:1.2">
+        <span><i style="--d:260ms">Adéntrate</i></span>
+        <span><i style="--d:360ms">en <i style="color: #e7f68eb5; zoom: 1.4;">Ibagué</i></i></span>
+      </h1>
+
+      <p class="lede mask" style="--d:480ms; --pd:14; --pr:1">Protegemos y compartimos los paisajes naturales de Ibagué,
+        fomentando un turismo consciente y sostenible.</p>
+
+      <div class="pill-clip">
+        <div class="pill mask" style="--d:600ms; --pd:15; --pr:1.4">
+          <div class="liquid-stage liquid-stage--explore" data-liquid-metal="explore">
+            <div class="liquid-plate plate" aria-hidden="true"></div>
+            <canvas class="liquid-fx" aria-hidden="true"></canvas>
+            <a class="liquid-button liquid-button--explore btn" href="https://es.wikiloc.com/rutas/senderismo/colombia/tolima/ibague" target="_blank" rel="noopener noreferrer">
+              <svg class="ico" viewBox="0 0 115 115" aria-hidden="true">
+                <g stroke="currentColor" stroke-width="11" stroke-linecap="round">
+                  <path d="M14 34.5 H101" />
+                  <path d="M14 57.5 H101" />
+                  <path d="M14 80.5 H68" />
+                </g>
+              </svg>
+              <span class="lbl">Explorar senderos</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <span class="play-wrap" style="--pd:20">
+        <span class="play-clip">
+          <span class="play-glass mask-circle" style="--d:900ms">
+            <span class="liquid-stage liquid-stage--play" data-liquid-metal="play">
+              <span class="liquid-plate plate" aria-hidden="true"></span>
+              <canvas class="liquid-fx" aria-hidden="true"></canvas>
+              <button class="liquid-button liquid-button--play btn" type="button" aria-label="Ver el video">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5.2v13.6L19 12z" fill="currentColor" />
+                </svg>
+              </button>
+            </span>
+          </span>
+        </span>
+        <span class="play-ring mask-circle" style="--d:840ms" aria-hidden="true"></span>
+      </span>
+
+      <dl class="stat stat--a mask" style="--d:700ms; --pd:12">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+            <circle cx="15" cy="15" r="10.5" stroke-dasharray="0.6 3.6" />
+            <circle cx="15" cy="15" r="5.6" stroke-dasharray="0.6 3.2" />
+            <circle cx="15" cy="15" r="1.1" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+        <div>
+          <dt>Bosques protegidos</dt>
+          <dd>1,200 ha</dd>
+        </div>
+      </dl>
+
+      <dl class="stat stat--b mask" style="--d:770ms; --pd:13">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+            <g id="rays">
+              <path d="M15 3.5v5" />
+              <path d="M15 21.5v5" />
+              <path d="M3.5 15h5" />
+              <path d="M21.5 15h5" />
+              <path d="M6.9 6.9l3.5 3.5" />
+              <path d="M19.6 19.6l3.5 3.5" />
+              <path d="M23.1 6.9l-3.5 3.5" />
+              <path d="M10.4 19.6l-3.5 3.5" />
+            </g>
+            <circle cx="15" cy="15" r="3.6" />
+          </svg>
+        </span>
+        <div>
+          <dt>Especies de aves</dt>
+          <dd>Más de 500</dd>
+        </div>
+      </dl>
+
+      <article class="card card--stove mask" style="--d:880ms; --pd:22; --pr:2.4">
+        <p class="label">EcoTour</p>
+        <h2>Cañón del Combeima</h2>
+        <figure class="portal" data-delay="1080">
+          <span class="portal-media"><img src="inner-green-assets/card-ecostove.jpg"
+              alt="Moss-covered boulders in a misty grove" loading="eager" decoding="async"></span>
+          <canvas class="pixel-reveal" aria-hidden="true"></canvas>
+        </figure>
+        <a class="knob" href="#combeima" aria-label="Ir a la sección Cañón del Combeima">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M12 21v-7" />
+            <path d="M12 14c0-3.3 2.4-6 5.5-6 .3 3.6-2.2 6.4-5.5 6Z" />
+            <path d="M12 16c-.1-2.9-2.2-5.2-4.9-5.2C6.8 13.7 9 16 12 16Z" />
+          </svg>
+        </a>
+      </article>
+
+      <a class="scroll mask" style="--d:1040ms; --pd:9" href="#">Descubrir<span class="track"></span></a>
+
+    </div>
+  </main>
+
+  <!-- Story sections. Tokens, costura y transición: bloque "story sections"
+       en styles/site.css; motor GSAP en js/story.js. -->
+  <!-- Variante glassmorphism (ver bloque .story--glass en site.css): tarjeta
+       de vidrio oscuro + colibrí protagonista solapado. Misma información
+       que la versión anterior: badge (eyebrow), título, línea poética,
+       panel "Sobre el Cañón" con sus 3 datos y el micro-dato del pie. -->
+  <section class="story story--glass" id="combeima" aria-labelledby="combeima-title">
+    <div class="glass-foliage par-story--back" aria-hidden="true"></div>
+    <div class="glass-mist par-story--back" aria-hidden="true"></div>
+    <div class="story-inner">
+      <div class="rise glass-card par-story">
+        <p class="glass-badge">EcoTour · Sur del Nevado</p>
+        <h2 id="combeima-title">Cañón del <i>Combeima</i></h2>
+        <p class="glass-lede">El valle que despierta al río</p>
+        <div class="story-about">
+          <h3>Sobre el Cañón</h3>
+          <ul>
+            <li>El Combeima nace de los deshielos del Nevado y talla este valle de bosque andino.</li>
+            <li>Sus laderas húmedas cobijan palmas de cera, orquídeas y cientos de aves — como este colibrí.</li>
+            <li>Es el corredor que une la ciudad con el páramo y sus caminos de agua.</li>
+          </ul>
+        </div>
+      </div>
+      <figure class="rise glass-figure par-story">
+        <span class="glass-glow" aria-hidden="true"></span>
+        <img class="glass-bird" src="inner-green-assets/colibri.webp" width="1303" height="912" loading="lazy"
+          decoding="async" alt="Colibrí en vuelo, alas extendidas">
+        <figcaption>
+          <span>Cuenca del río <b>Combeima</b></span>
+          <span>Tolima · Colombia</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="story story--flip" id="nevado" aria-labelledby="nevado-title">
+    <div class="story-inner">
+      <figure class="rise par-story">
+        <img src="inner-green-assets/nevado-tolima-portrait.jpg" width="640" height="960" loading="lazy" decoding="async"
+          alt="El Nevado del Tolima visto en formato vertical">
+        <figcaption>
+          <span>Altitud <b>5,215 m</b></span>
+          <span>Tolima · Colombia</span>
+        </figcaption>
+      </figure>
+      <div class="rise par-story">
+        <p class="eyebrow">Cordillera Central · Colombia</p>
+        <h2 id="nevado-title">El gigante dormido <i>del Tolima</i></h2>
+        <div class="story-about par-story">
+          <h3>Sobre el Nevado</h3>
+          <ul>
+            <li>Volcán cubierto de glaciares cuyos deshielos alimentan el río Combeima.</li>
+            <li>Su cumbre es sagrada para las comunidades indígenas de la región.</li>
+            <li>El ascenso atraviesa páramo, bosque de niebla y valles glaciares.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rutas: 4 sendales de Ibagué en grid de cards tipo hero.
+       Fondo de cada card: placeholder gradiente hasta que se peguen las fotos
+       reales (ver .route-card__bg en site.css). Las fotos reales van en
+       .portal-media img src — sin foto, el gradiente CSS pinta la atmósfera. -->
+  <section class="story" id="rutas" aria-labelledby="rutas-title">
+    <div class="story-inner">
+      <div class="rise par-story">
+        <p class="eyebrow">Senderos y aguas · Ibagué</p>
+        <h2 id="rutas-title">Rutas que <i>te cambian</i> el rumbo</h2>
+        <p class="lede">
+          Cuatro caminos para entrar al páramo, sentir el vapor de las aguas
+          termales y perder la vista desde lo alto del cerro — cada uno con
+          su propia luz.
+        </p>
+      </div>
+
+      <div class="routes-grid">
+
+        <!-- 1 — Cascada La Plata -->
+        <article class="card route-card route-card--cascada mask par-story" style="--d:940ms">
+          <p class="label">Agua</p>
+          <h2>Cascada La Plata</h2>
+          <figure class="portal" data-delay="940">
+            <span class="portal-media">
+              <img src="inner-green-assets/cascada_la_plata.webp" alt="Cascada La Plata, agua blanca sobre rocas verdes"
+                loading="lazy" decoding="async"></span>
+            <canvas class="pixel-reveal" aria-hidden="true"></canvas>
+          </figure>
+          <a class="knob" href="https://www.google.com/maps/place/Cascada+La+Plata/@4.5188882,-75.2889569,17z/data=!3m1!4b1!4m6!3m5!1s0x8e38c109525188e1:0x9f78d0e520d905d1!8m2!3d4.5188882!4d-75.2889569!16s%2Fg%2F11dfh5j4fr?entry=ttu&amp;g_ep=EgoyMDI2MDkxMy4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de Cascada La Plata en Google Maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 21v-7"/>
+              <path d="M12 14c0-3.3 2.4-6 5.5-6 .3 3.6-2.2 6.4-5.5 6Z"/>
+              <path d="M12 16c-.1-2.9-2.2-5.2-4.9-5.2C6.8 13.7 9 16 12 16Z"/>
+            </svg>
+          </a>
+        </article>
+
+        <!-- 2 — Termales El Rancho -->
+        <article class="card route-card route-card--termales mask par-story" style="--d:1040ms">
+          <p class="label">Agua</p>
+          <h2>Termales El Rancho</h2>
+          <figure class="portal" data-delay="1040">
+            <span class="portal-media">
+              <img src="inner-green-assets/termales_el_rancho.jpg" alt="Termales El Rancho, aguas termales entre la vegetación"
+                loading="lazy" decoding="async"></span>
+            <canvas class="pixel-reveal" aria-hidden="true"></canvas>
+          </figure>
+          <a class="knob" href="https://www.google.com/maps/place/El+Rancho-Termales./@4.6158709,-75.3401238,17z/data=!3m1!4b1!4m6!3m5!1s0x8e38be2b178cee2f:0xb142fbb0423dd739!8m2!3d4.6158656!4d-75.3375435!16s%2Fg%2F1tjgqmpy?entry=ttu&amp;g_ep=EgoyMDI2MDkxMy4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de Termales El Rancho en Google Maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 21v-7"/>
+              <path d="M12 14c0-3.3 2.4-6 5.5-6 .3 3.6-2.2 6.4-5.5 6Z"/>
+              <path d="M12 16c-.1-2.9-2.2-5.2-4.9-5.2C6.8 13.7 9 16 12 16Z"/>
+            </svg>
+          </a>
+        </article>
+
+        <!-- 3 — Alto El Oso -->
+        <article class="card route-card route-card--oso mask par-story" style="--d:1140ms">
+          <p class="label">Cerro</p>
+          <h2>Bosque alto el Oso</h2>
+          <figure class="portal" data-delay="1140">
+            <span class="portal-media">
+              <img src="inner-green-assets/alto_el_oso.jpg" alt="Alto El Oso, vista del páramo desde la cima"
+                loading="lazy" decoding="async"></span>
+            <canvas class="pixel-reveal" aria-hidden="true"></canvas>
+          </figure>
+          <a class="knob" href="https://www.google.com/maps/place/Juntas,+Ibagu%C3%A9,+Tolima/@4.5197106,-75.3286018,14.94z/data=!4m6!3m5!1s0x8e38be069af12ced:0xa3835d53c2f28f4!8m2!3d4.65005!4d-75.33336!16s%2Fg%2F1v2yzxnd?entry=ttu&amp;g_ep=EgoyMDI2MDkxMy4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de Bosque Alto El Oso en Google Maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 21v-7"/>
+              <path d="M12 14c0-3.3 2.4-6 5.5-6 .3 3.6-2.2 6.4-5.5 6Z"/>
+              <path d="M12 16c-.1-2.9-2.2-5.2-4.9-5.2C6.8 13.7 9 16 12 16Z"/>
+            </svg>
+          </a>
+        </article>
+
+        <!-- 4 — Teleférico Hacienda Primavera -->
+        <article class="card route-card route-card--telesferico mask par-story" style="--d:1240ms">
+          <p class="label">Vista</p>
+          <h2>Teleférico Primavera</h2>
+          <figure class="portal" data-delay="1240">
+            <span class="portal-media">
+              <img src="inner-green-assets/telesferico_hacienda_primavera.webp" alt="Teleférico Hacienda Primavera, vista panorámica del valle"
+                loading="lazy" decoding="async"></span>
+            <canvas class="pixel-reveal" aria-hidden="true"></canvas>
+          </figure>
+          <a class="knob" href="https://www.google.com/maps/dir//FINCA+LA+RIVERA,+V%C3%ADa+al+Nevado+del+Tolima+%23Km+21,+Ibagu%C3%A9,+Ca%C3%B1%C3%B3n+del+Combeima,+Ibagu%C3%A9,+Tolima/@4.5770486,-75.3847259,13z/data=!4m20!1m10!3m9!1s0x8e38bff65552d2a5:0xa16dbf3b235d5544!2sFINCA+LA+RIVERA!5m2!4m1!1i2!8m2!3d4.5770486!4d-75.3308319!16s%2Fg%2F11b_021zdt!4m8!1m0!1m5!1m1!1s0x8e38bff65552d2a5:0xa16dbf3b235d5544!2m2!1d-75.3308319!2d4.5770486!3e0?entry=ttu&amp;g_ep=EgoyMDI2MDkxMy4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación del Teleférico Hacienda Primavera en Google Maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 21v-7"/>
+              <path d="M12 14c0-3.3 2.4-6 5.5-6 .3 3.6-2.2 6.4-5.5 6Z"/>
+              <path d="M12 16c-.1-2.9-2.2-5.2-4.9-5.2C6.8 13.7 9 16 12 16Z"/>
+            </svg>
+          </a>
+        </article>
+
+      </div><!-- /.routes-grid -->
+    </div>
+  </section>
+
+  <!-- Visitar: cierre del recorrido — vidrio sobre atardecer del cañón.
+       Misma familia glass que #combeima (blur 22px, borde rgba .15, badge
+       pill, bullets lima), variante cálida para el cierre. El sticky-stack
+       y el depth effect los aporta .story (js/story.js), sin JS extra. -->
+  <section class="story story--glass story--sunset" id="visitar" aria-labelledby="visitar-title">
+    <div class="glass-foliage par-story--back" aria-hidden="true"></div>
+    <div class="glass-mist par-story--back" aria-hidden="true"></div>
+    <div class="story-inner">
+      <div class="rise glass-card par-story">
+        <header class="glass-head">
+          <p class="glass-badge">Planifica tu visita</p>
+          <h2 id="visitar-title">Ven a caminar <i>con nosotros</i></h2>
+        </header>
+        <div class="glass-copy">
+          <p class="glass-sub">Ibagué está a tres horas de Bogotá por la ruta al Tolima.</p>
+        <div class="story-about">
+          <h3>Antes de salir</h3>
+          <ul>
+            <li>Cómo llegar: vía Bogotá–Ibagué o La Línea; buses cada hora desde el terminal.</li>
+            <li>Cuándo ir: diciembre a marzo y julio a agosto — cielos abiertos para el nevado.</li>
+            <li>Qué llevar: capas de abrigo, zapatos de sendero y mismo guía certificado para las rutas.</li>
+          </ul>
+        </div>
+          <div class="pill visitar-cta par-story">
+            <div class="liquid-stage liquid-stage--explore" data-liquid-metal="explore">
+              <div class="liquid-plate plate" aria-hidden="true"></div>
+              <canvas class="liquid-fx" aria-hidden="true"></canvas>
+              <a class="liquid-button liquid-button--explore btn" href="https://www.instagram.com/valresnick/" target="_blank" rel="noopener noreferrer" aria-label="Planear mi viaje — Instagram de Ibagué Adéntrate">
+                <svg class="ico" viewBox="0 0 115 115" aria-hidden="true">
+                  <g stroke="currentColor" stroke-width="11" stroke-linecap="round">
+                    <path d="M14 34.5 H101" />
+                    <path d="M14 57.5 H101" />
+                    <path d="M14 80.5 H68" />
+                  </g>
+                </svg>
+                <span class="lbl">Planear mi viaje</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <figure class="glass-figure par-story">
+          <span class="glass-glow" aria-hidden="true"></span>
+          <span class="glass-window">
+            <img class="glass-peak" src="inner-green-assets/visitar-vista.webp" width="1600" height="1308"
+              loading="lazy" decoding="async" alt="Vista panorámica recortada del valle al atardecer — el paisaje que se camina en la visita">
+            <span class="glass-beam" aria-hidden="true"></span>
+          </span>
+          <figcaption>
+              <span><b>Pie de roca </b></span>
+            <span>Nevado del Tolima · Colombia</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal de video: el play del hero abre el video institucional aquí.
+       Motor en js/video-modal.js; estilos junto al resto de la sección
+       glass (tokens --u/--ink, blur de vidrio, radio --ease-out). -->
+  <dialog class="video-modal" id="video-modal" aria-label="Video: Ibagué adéntrate">
+    <div class="video-modal__frame">
+      <button class="video-modal__close" type="button" aria-label="Cerrar video">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 6l12 12" />
+            <path d="M18 6L6 18" />
+          </g>
+        </svg>
+      </button>
+      <video controls playsinline></video>
+    </div>
+  </dialog>
+
+  <script src="inner-green-assets/three.min.js"></script>
+  <script src="js/liquid-metal.js"></script>
+  <script src="js/page.js?v=2"></script>
+  <script src="inner-green-assets/gsap.min.js"></script>
+  <script src="inner-green-assets/ScrollTrigger.min.js"></script>
+  <script src="js/story.js?v=5"></script>
+  <script src="js/nav-spy.js?v=2"></script>
+  <script src="js/video-modal.js?v=3"></script>
+</body>
+</html>

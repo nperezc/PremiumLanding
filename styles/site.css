@@ -1,0 +1,2763 @@
+/* index.html — extracted verbatim from the original <style> block.
+   Design-unit system, dock, hero choreography, entrance masks. */
+    @font-face {
+      font-family: 'Lexend';
+      src: url('../inner-green-assets/lexend-latin.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    /* ── design unit: 1u === 1px on the 1600 × 880 reference frame ───────── */
+    :root {
+      --u: calc(100vw / 1600);
+
+      --ink: #ffffff;
+      --ink-soft: rgba(255, 255, 255, .62);
+      --ink-faint: rgba(255, 255, 255, .44);
+      --rule: rgba(255, 255, 255, .055);
+
+      --card: #f2f3ef;
+      --card-ink: #23261f;
+      --card-label: #7c8177;
+
+      --ease: cubic-bezier(.22, .61, .36, 1);
+      --ease-out: cubic-bezier(.16, 1, .3, 1);
+    }
+
+    @media (min-width:1900px) {
+      :root {
+        --u: calc(1900px / 1600);
+      }
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background: #383b34;
+    }
+
+    body {
+      font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 300;
+      color: var(--ink);
+      background: #383b34;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── hero shell ──────────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100svh;
+      min-height: calc(880 * var(--u));
+      overflow: hidden;
+      isolation: isolate;
+      /* the reference screen reads a near-flat #4a4d44 corner to corner —
+       all the modelling comes from the light pool the root sits in */
+      background:
+        radial-gradient(64% 52% at 27% 84%, rgba(232, 238, 222, .085) 0%, rgba(232, 238, 222, 0) 72%),
+        radial-gradient(70% 60% at 92% 8%, rgba(24, 28, 20, .10) 0%, rgba(24, 28, 20, 0) 68%),
+        #4a4d44;
+    }
+
+    /* The floor of light the root stands in. Sampled off the reference: the
+     background climbs from 73 luma at the nav to ~128 at y 850, brightest
+     around the middle of the bottom edge. */
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(72% 44% at 50% 117%, rgba(238, 243, 231, .50) 0%, rgba(238, 243, 231, .21) 42%, rgba(238, 243, 231, .04) 72%, rgba(238, 243, 231, 0) 88%),
+        linear-gradient(180deg, rgba(238, 243, 231, 0) 54%, rgba(238, 243, 231, .03) 78%, rgba(238, 243, 231, .085) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* The whole composition lives on a centred 1600 × 880 stage.
+     Centred with margins rather than a transform on purpose: a transform would
+     open a stacking context and trap every child below #scene. */
+    .stage {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      margin-left: calc(-800 * var(--u));
+      margin-top: calc(-440 * var(--u));
+      width: calc(1600 * var(--u));
+      height: calc(880 * var(--u));
+    }
+
+    /* ── column guides (z 1) ─────────────────────────────────────────────── */
+    .guides {
+      position: absolute;
+      inset: calc(-40 * var(--u)) 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .guides i {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--rule) 12%, var(--rule) 78%, rgba(255, 255, 255, 0) 100%);
+    }
+
+    /* ── ghost wordmark (z 1) ────────────────────────────────────────────── */
+    .ghost {
+      position: absolute;
+      z-index: 1;
+      left: calc(6 * var(--u));
+      bottom: calc(-64 * var(--u));
+      font-size: calc(310 * var(--u));
+      line-height: .78;
+      font-weight: 400;
+      letter-spacing: calc(30 * var(--u));
+      color: rgba(255, 255, 255, .055);
+      white-space: nowrap;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* ── three.js canvas (z 3 — above card 1, below everything else) ─────── */
+    #scene {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .7s var(--ease);
+    }
+
+    .is-ready #scene {
+      opacity: 1;
+    }
+
+    /* ── nav: a floating dock (z 5) ──────────────────────────────────────
+     A centred capsule of pills that magnify as the pointer nears them, over
+     a rim highlight that tracks where the pointer is — the dock idiom from
+     ascii-page-transition, in this page's palette and unit system.
+     The wrapper does the centring so the capsule itself is free to carry the
+     pointer-parallax transform; putting both on one element means whichever
+     is written last wins and the dock jumps out of centre. */
+    .dock-wrap {
+      /* fixed: la nav persiste sobre hero y secciones de historia. El motor
+         de profundidad del apilado (story.js) escribe filter/transform en las
+         .story — un ancestro fijo con filter rompería el position:fixed, así
+         que .dock-wrap se mantiene fuera de cualquier .story y sin filter. */
+      position: fixed;
+      z-index: 50;
+      top: calc(38 * var(--u));
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    /* anclas suaves al hacer clic en la nav; reduced-motion salta directo */
+    @media (prefers-reduced-motion: no-preference) {
+      html {
+        scroll-behavior: smooth;
+      }
+    }
+
+    .dock {
+      pointer-events: auto;
+      display: flex;
+      align-items: flex-start;
+      gap: calc(3 * var(--u));
+      height: calc(46 * var(--u));
+      padding: calc(5 * var(--u));
+      border-radius: calc(14 * var(--u));
+      border: 1px solid rgba(255, 255, 255, .11);
+      /* No backdrop-filter. It sits over a canvas that repaints every frame,
+       so the backdrop has to be re-sampled and re-blurred every frame too —
+       measured at ~20 fps off the whole page, and the radius made no
+       difference because the cost is the extra pass, not the blur. A
+       translucent panel with a lit top edge reads the same at this size. */
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, 0) 42%),
+        rgba(34, 40, 31, .74);
+      box-shadow: 0 calc(8 * var(--u)) calc(22 * var(--u)) rgba(10, 14, 8, .30),
+        inset 0 1px rgba(255, 255, 255, .06);
+      isolation: isolate;
+    }
+
+    /* Anchored at the top so growth runs downward, out of the headline's way —
+     a dock that grew from its centre would push into the nav's own row. */
+    .dock-item {
+      position: relative;
+      z-index: 6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+      height: calc(36 * var(--u));
+      gap: calc(8 * var(--u));
+      padding: 0 calc(13 * var(--u));
+      transform-origin: 50% 0;
+      border: 1px solid transparent;
+      border-radius: calc(10 * var(--u));
+      background: rgba(255, 255, 255, .04);
+      color: var(--ink-faint);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: calc(11 * var(--u));
+      font-weight: 500;
+      letter-spacing: calc(1.5 * var(--u));
+      text-transform: uppercase;
+      white-space: nowrap;
+      will-change: width, height, transform;
+      transition: color .18s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+    }
+
+    /* A magnified pill hangs below the capsule, so it needs to be its own
+     opaque tile — a translucent white wash at that size reads as a milky
+     rectangle stuck to the bar rather than as a key lifting off it. */
+    .dock-item[data-near="true"] {
+      z-index: 7;
+      color: var(--ink);
+      border-color: rgba(255, 255, 255, .19);
+      background: rgba(31, 37, 28, .94);
+      box-shadow: 0 calc(7 * var(--u)) calc(16 * var(--u)) rgba(10, 14, 8, .30);
+    }
+
+    .dock-item .glyph {
+      width: calc(14 * var(--u));
+      height: calc(14 * var(--u));
+      flex: none;
+      opacity: .66;
+      transition: opacity .18s var(--ease);
+    }
+
+    .dock-item .glyph svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.25;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .dock-item[data-near="true"] .glyph {
+      opacity: 1;
+    }
+
+    /* the mark is the dock's anchor: a solid pale tile, the one opaque thing
+     in a bar made of glass */
+    .dock-mark {
+      width: calc(36 * var(--u));
+      padding: 0;
+      background: #eef1e7;
+      border-color: #eef1e7;
+      color: #23261f;
+      overflow: hidden;
+    }
+
+    /* logo ilustrado (ibague.svg, paleta propia): el tile pálido hace de marco */
+    .dock-mark img {
+      width: 78%;
+      height: 78%;
+      display: block;
+      object-fit: contain;
+    }
+
+    /* the near state paints .dock-item white, which on the pale mark tile
+     would be a white glyph on a white ground */
+    .dock-mark[data-near="true"] {
+      background: #fff;
+      border-color: #fff;
+      color: #1b1e18;
+    }
+
+    /* the current section wears the cards' paper, so the nav and the cards
+     read as the same material */
+    .dock-item.is-active {
+      background: var(--card);
+      border-color: var(--card);
+      color: var(--card-ink);
+      box-shadow: 0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(12, 17, 9, .24);
+    }
+
+    .dock-item.is-active .glyph {
+      opacity: .8;
+    }
+
+    .dock-item--enter {
+      color: var(--ink);
+      background: rgba(255, 255, 255, .075);
+    }
+
+    /* ── specular rim ────────────────────────────────────────────────────
+     A conic gradient masked down to the border, whose start angle points at
+     the pointer and whose opacity falls off with distance. It is the reason
+     the glass reads as a lit edge rather than as a flat translucent box. */
+    [data-spec] {
+      --spec-angle: 2.4rad;
+      --spec-bright: 0;
+    }
+
+    [data-spec]::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      z-index: 5;
+      padding: 1px;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: var(--spec-bright);
+      background: conic-gradient(from var(--spec-angle) at 50% 50%,
+          rgba(240, 246, 232, 0) 0deg, rgba(240, 246, 232, .08) 14deg, rgba(240, 246, 232, .95) 28deg,
+          rgba(240, 246, 232, .16) 46deg, rgba(240, 246, 232, 0) 68deg, rgba(240, 246, 232, 0) 180deg,
+          rgba(240, 246, 232, .08) 194deg, rgba(240, 246, 232, .95) 208deg, rgba(240, 246, 232, .16) 226deg,
+          rgba(240, 246, 232, 0) 248deg, rgba(240, 246, 232, 0) 360deg);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+
+    .dock {
+      position: relative;
+    }
+
+    /* ── hero copy (z 4) ─────────────────────────────────────────────────── */
+    .headline {
+      position: absolute;
+      z-index: 4;
+      left: calc(46 * var(--u));
+      top: calc(202 * var(--u));
+      font-size: calc(63 * var(--u));
+      line-height: calc(65 * var(--u));
+      font-weight: 300;
+      letter-spacing: calc(-0.4 * var(--u));
+      color: var(--ink);
+    }
+
+    /* No overflow clip: cropping a 63u face to wipe it in cuts the descenders
+     of "Step" and "living" at the moment they land. The padding stays even
+     though the clip is gone — it set the two lines' metrics, and removing it
+     would shift line two. */
+    .headline span {
+      display: block;
+      padding-bottom: .04em;
+    }
+
+    .headline span i {
+      display: inline-block;
+      font-style: normal;
+    }
+
+    .lede {
+      position: absolute;
+      z-index: 4;
+      left: calc(520 * var(--u));
+      top: calc(196 * var(--u));
+      width: calc(208 * var(--u));
+      font-size: calc(16.5 * var(--u));
+      line-height: calc(22 * var(--u));
+      font-weight: 300;
+      color: var(--ink-soft);
+    }
+
+    /* dentro de los story el lede es texto de flujo, no la pastilla absoluta
+       del hero (esa posición/anchura solo tienen sentido sobre el hero) */
+    .story .lede {
+      position: static;
+      z-index: auto;
+      width: auto;
+      max-width: calc(560 * var(--u));
+      margin-top: calc(18 * var(--u));
+      font-size: calc(16.5 * var(--u));
+      line-height: calc(24 * var(--u));
+    }
+
+    /* ── liquid-metal controls ──────────────────────────────────────────
+     The original five-pass WebGL2 renderer now mounts directly in this
+     document. Its canvas, sizing, glass plate, shader constants and input
+     model are unchanged; only the iframe boundary has been removed. */
+    .pill-clip {
+      position: absolute;
+      z-index: 4;
+      left: calc(644 * var(--u));
+      top: calc(360 * var(--u));
+      width: calc(410 * var(--u));
+      height: calc(270 * var(--u));
+      margin: calc(-135 * var(--u)) 0 0 calc(-205 * var(--u));
+      clip-path: inset(calc(72 * var(--u)) calc(60 * var(--u)) calc(26 * var(--u)) calc(60 * var(--u)) round calc(62 * var(--u)));
+    }
+
+    .pill {
+      position: absolute;
+      inset: 0;
+      --mr: calc(150 * var(--u));
+      display: grid;
+      place-items: center;
+    }
+
+    .liquid-stage {
+      --lu: calc(var(--h) / 516);
+      --bh: var(--h);
+      --pad: calc(900 * var(--lu));
+      position: relative;
+      width: max-content;
+      height: max-content;
+      padding: var(--pad);
+      display: grid;
+      place-items: center;
+      touch-action: manipulation;
+      font-family: 'Lexend', 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      font-optical-sizing: auto;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .liquid-stage--explore {
+      --h: calc(60.156 * var(--u));
+    }
+
+    .liquid-stage--play {
+      --h: calc(88.2288 * var(--u));
+    }
+
+    .liquid-plate {
+      position: absolute;
+      inset: var(--pad);
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .014) 44%, rgba(255, 255, 255, 0) 64%),
+        rgba(10, 12, 10, .42);
+      box-shadow:
+        0 calc(var(--h) * 0.08) calc(var(--h) * 0.18) rgba(0, 0, 0, .38),
+        0 calc(var(--h) * 0.24) calc(var(--h) * 0.50) rgba(0, 0, 0, .28),
+        0 calc(var(--h) * 0.48) calc(var(--h) * 0.96) rgba(0, 0, 0, .16),
+        inset 0 1px 0 rgba(255, 255, 255, .13),
+        inset 0 calc(var(--h) * -0.02) calc(var(--h) * 0.05) rgba(255, 255, 255, .05);
+      transition: box-shadow .38s cubic-bezier(.22, .61, .36, 1),
+        background .38s cubic-bezier(.22, .61, .36, 1);
+    }
+
+    .liquid-stage.hot .liquid-plate {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .105), rgba(255, 255, 255, .02) 44%, rgba(255, 255, 255, 0) 64%),
+        rgba(8, 10, 8, .50);
+      box-shadow:
+        0 calc(var(--h) * 0.10) calc(var(--h) * 0.22) rgba(0, 0, 0, .44),
+        0 calc(var(--h) * 0.32) calc(var(--h) * 0.66) rgba(0, 0, 0, .34),
+        0 calc(var(--h) * 0.66) calc(var(--h) * 1.32) rgba(0, 0, 0, .20),
+        inset 0 1px 0 rgba(255, 255, 255, .17),
+        inset 0 calc(var(--h) * -0.02) calc(var(--h) * 0.05) rgba(255, 255, 255, .06);
+    }
+
+    .liquid-fx {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .liquid-button {
+      position: relative;
+      height: var(--bh);
+      border: 0;
+      background: none;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: inherit;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+      text-decoration: none;
+    }
+
+    .liquid-button:focus-visible {
+      outline: calc(4 * var(--lu)) solid rgba(255, 255, 255, .55);
+      outline-offset: calc(10 * var(--lu));
+    }
+
+    .liquid-button .ico {
+      display: block;
+      flex: none;
+      overflow: visible;
+    }
+
+    .liquid-button .lbl {
+      display: block;
+      transform: translateY(calc(2 * var(--lu)));
+    }
+
+    .liquid-button--explore {
+      padding: 0 calc(224 * var(--lu)) 0 calc(95 * var(--lu));
+      gap: calc(112 * var(--lu));
+      font-size: calc(140 * var(--lu));
+    }
+
+    .liquid-button--explore .ico {
+      width: calc(150 * var(--lu));
+      height: calc(150 * var(--lu));
+    }
+
+    .liquid-button--play {
+      width: var(--bh);
+      height: var(--bh);
+      padding: 0;
+    }
+
+    .liquid-button--play .ico {
+      width: calc(176 * var(--lu));
+      height: calc(176 * var(--lu));
+      margin-left: calc(14 * var(--lu));
+    }
+
+    .liquid-button--play .lbl {
+      display: none;
+    }
+
+    .liquid-stage.press .liquid-plate {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .01) 44%, rgba(255, 255, 255, 0) 64%),
+        rgba(7, 9, 7, .55);
+      box-shadow:
+        0 calc(var(--h) * 0.04) calc(var(--h) * 0.11) rgba(0, 0, 0, .46),
+        0 calc(var(--h) * 0.13) calc(var(--h) * 0.32) rgba(0, 0, 0, .36),
+        0 calc(var(--h) * 0.27) calc(var(--h) * 0.62) rgba(0, 0, 0, .22),
+        inset 0 1px 0 rgba(255, 255, 255, .10);
+      transition-duration: .10s;
+    }
+
+    /* ── play button (z 4) ─────────────────────────────────────────────── */
+    .play-wrap {
+      position: absolute;
+      z-index: 4;
+      pointer-events: none;
+      left: calc(187 * var(--u));
+      top: calc(431 * var(--u));
+      width: calc(170 * var(--u));
+      height: calc(170 * var(--u));
+    }
+
+    .play-wrap>* {
+      pointer-events: auto;
+    }
+
+    .play-clip {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: calc(396 * var(--u));
+      height: calc(396 * var(--u));
+      margin: calc(-198 * var(--u)) 0 0 calc(-198 * var(--u));
+      clip-path: inset(calc(131 * var(--u)) calc(106 * var(--u)) calc(73 * var(--u)) calc(106 * var(--u)) round calc(92 * var(--u)));
+    }
+
+    .play-glass {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .play-ring {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, .17);
+      border-radius: 50%;
+    }
+
+    .play-ring::after {
+      content: '';
+      position: absolute;
+      inset: calc(-1 * var(--u));
+      border: 1px solid rgba(255, 255, 255, .32);
+      border-radius: 50%;
+      opacity: 0;
+      transform: scale(.86);
+      transition: opacity .7s var(--ease), transform .9s var(--ease-out);
+    }
+
+    .play-clip:hover~.play-ring::after,
+    .play-clip:focus-within~.play-ring::after {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+
+    /* ── stats (z 4) ─────────────────────────────────────────────────────── */
+    .stat {
+      position: absolute;
+      z-index: 4;
+      display: flex;
+      align-items: flex-start;
+      gap: calc(9 * var(--u));
+    }
+
+    .stat--a {
+      left: calc(1250 * var(--u));
+      top: calc(216 * var(--u));
+    }
+
+    .stat--b {
+      left: calc(1346 * var(--u));
+      top: calc(326 * var(--u));
+    }
+
+    .stat .mark {
+      width: calc(32 * var(--u));
+      height: calc(32 * var(--u));
+      flex: none;
+      margin-top: calc(2 * var(--u));
+      color: rgba(255, 255, 255, .34);
+    }
+
+    .stat .mark svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .stat dt {
+      font-size: calc(13.5 * var(--u));
+      font-weight: 300;
+      color: var(--ink-soft);
+      line-height: calc(19 * var(--u));
+    }
+
+    .stat dt,
+    .stat dd {
+      text-shadow: 0 calc(2 * var(--u)) calc(16 * var(--u)) rgba(10, 14, 8, .6);
+    }
+
+    .stat .mark svg {
+      filter: drop-shadow(0 calc(2 * var(--u)) calc(10 * var(--u)) rgba(10, 14, 8, .6));
+    }
+
+    .stat dd {
+      font-size: calc(13.5 * var(--u));
+      font-weight: 600;
+      color: var(--ink);
+      line-height: calc(21 * var(--u));
+    }
+
+    /* ── cards ───────────────────────────────────────────────────────────── */
+    .card {
+      position: absolute;
+      background: var(--card);
+      border-radius: calc(46 * var(--u));
+      box-shadow: 0 calc(30 * var(--u)) calc(70 * var(--u)) rgba(16, 21, 13, .30);
+      transition: box-shadow .8s var(--ease);
+    }
+
+    /* No z-index here on purpose. z-index:auto keeps the card out of its own
+     stacking context, so the body paints under #scene (the moss drapes over
+     its shoulder) while .knob, at z 4, still sits in front of the moss. */
+    .card--about {
+      left: calc(890 * var(--u));
+      top: calc(200 * var(--u));
+      width: calc(330 * var(--u));
+      height: calc(305 * var(--u));
+    }
+
+    .card--stove {
+      z-index: 4;
+      will-change: transform;
+      left: calc(1237 * var(--u));
+      top: calc(482 * var(--u));
+      width: calc(328 * var(--u));
+      height: calc(310 * var(--u));
+    }
+
+    .card .label {
+      position: absolute;
+      left: calc(38 * var(--u));
+      font-size: calc(15.5 * var(--u));
+      font-weight: 300;
+      color: var(--card-label);
+    }
+
+    .card h2 {
+      position: absolute;
+      left: calc(38 * var(--u));
+      font-size: calc(26.2 * var(--u));
+      line-height: calc(27 * var(--u));
+      font-weight: 400;
+      letter-spacing: calc(-0.5 * var(--u));
+      color: var(--card-ink);
+    }
+
+    .card--about .label {
+      top: calc(152 * var(--u));
+    }
+
+    .card--about h2 {
+      top: calc(177 * var(--u));
+      width: calc(142 * var(--u));
+    }
+
+    .card--stove .label {
+      top: calc(45 * var(--u));
+    }
+
+    .card--stove h2 {
+      top: calc(70 * var(--u));
+    }
+
+    /* Both cards carry a plate. The Field Note reads downward — label, title,
+     then the photograph — so its window sits at the foot of the card; the
+     Ethos card reads the other way up, so its window is at the head and the
+     copy sits under it. Same frame, mirrored. */
+    .card figure {
+      position: absolute;
+      left: calc(14 * var(--u));
+      right: calc(14 * var(--u));
+      border-radius: calc(34 * var(--u));
+      overflow: hidden;
+      isolation: isolate;
+      background: #263025;
+    }
+
+    .card--stove figure {
+      bottom: calc(14 * var(--u));
+      height: calc(185 * var(--u));
+    }
+
+    .card--about figure {
+      top: calc(14 * var(--u));
+      height: calc(122 * var(--u));
+    }
+
+    /* The plate is its own depth plane. It travels against the card and the
+     moss, so the landscape feels like a small window rather than a
+     photograph glued to the surface. */
+    .portal-media {
+      position: absolute;
+      inset: calc(-9 * var(--u));
+      z-index: 1;
+      display: block;
+      will-change: transform, clip-path;
+      transform:
+        perspective(900px) translate3d(calc(var(--px, 0) * -11px), calc(var(--py, 0) * -7px), 0) rotateY(calc(var(--px, 0) * -1.4deg)) rotateX(calc(var(--py, 0) * .9deg));
+      transform-origin: 50% 50%;
+    }
+
+    .portal-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.08);
+      filter: saturate(.92) contrast(1.03);
+      transition: transform 1.25s var(--ease-out), filter .8s var(--ease);
+    }
+
+    .card:hover .portal-media img {
+      transform: scale(1.13);
+      filter: saturate(1.04) contrast(1.04);
+    }
+
+    .pixel-reveal {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      mix-blend-mode: screen;
+    }
+
+    /* The white scan rides the clip edge, so its centre has to travel the
+     media element's box, not the figure's — .portal-media is overscanned by
+     9u on every side to give the parallax rotation somewhere to go. Offsetting
+     by that 9u in calc() rather than by a translate percentage keeps the
+     glow on the edge at every breakpoint, whatever size the plate is. */
+    .card figure::after {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      filter: blur(calc(2 * var(--u)));
+      opacity: 0;
+      pointer-events: none;
+      top: 0;
+      bottom: 0;
+      width: 26%;
+      left: calc(-13% - 9 * var(--u));
+      background: linear-gradient(90deg, transparent, rgba(229, 244, 209, .2) 42%, rgba(252, 255, 246, .72) 54%, transparent);
+    }
+
+    .knob-float {
+      position: absolute;
+      z-index: 4;
+      pointer-events: none;
+      left: calc(1142 * var(--u));
+      top: calc(427 * var(--u));
+      width: calc(58 * var(--u));
+      height: calc(58 * var(--u));
+    }
+
+    .knob-float>* {
+      pointer-events: auto;
+    }
+
+    .knob--about {
+      left: 0;
+      top: 0;
+    }
+
+    .card .knob,
+    .knob--about {
+      position: absolute;
+      z-index: 4;
+      right: calc(20 * var(--u));
+      bottom: calc(20 * var(--u));
+      width: calc(58 * var(--u));
+      height: calc(58 * var(--u));
+      border: 0;
+      border-radius: 50%;
+      cursor: pointer;
+      background: #fbfcf8;
+      display: grid;
+      place-items: center;
+      text-decoration: none;
+      box-shadow: 0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(16, 21, 13, .18);
+      transition: transform .5s var(--ease-out), background .4s var(--ease);
+    }
+
+    .knob--about {
+      right: auto;
+      bottom: auto;
+      width: calc(58 * var(--u));
+      height: calc(58 * var(--u));
+    }
+
+    .card--stove .knob {
+      width: calc(54 * var(--u));
+      height: calc(54 * var(--u));
+      right: calc(26 * var(--u));
+      bottom: calc(26 * var(--u));
+    }
+
+    .card .knob svg,
+    .knob--about svg {
+      width: calc(19 * var(--u));
+      height: calc(19 * var(--u));
+      display: block;
+      color: #3f453a;
+    }
+
+    .card .knob:hover,
+    .knob--about:hover {
+      transform: scale(1.1) rotate(8deg);
+      background: #fff;
+    }
+
+    .card:hover {
+      box-shadow: 0 calc(38 * var(--u)) calc(84 * var(--u)) rgba(16, 21, 13, .36);
+    }
+
+    /* ── scroll cue (z 4) ────────────────────────────────────────────────── */
+    .scroll {
+      position: absolute;
+      z-index: 4;
+      left: calc(846 * var(--u));
+      top: calc(690 * var(--u));
+      display: flex;
+      align-items: center;
+      gap: calc(12 * var(--u));
+      writing-mode: vertical-rl;
+      font-size: calc(11 * var(--u));
+      font-weight: 400;
+      letter-spacing: calc(4.4 * var(--u));
+      color: rgba(255, 255, 255, .5);
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+
+    .scroll .track {
+      position: relative;
+      width: 1px;
+      height: calc(56 * var(--u));
+      background: rgba(255, 255, 255, .18);
+      overflow: hidden;
+    }
+
+    .scroll .track::after {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto;
+      height: 40%;
+      background: rgba(255, 255, 255, .75);
+      animation: trickle 2.6s var(--ease) infinite;
+    }
+
+    @keyframes trickle {
+      0% {
+        transform: translateY(-105%);
+        opacity: 0;
+      }
+
+      22% {
+        opacity: 1;
+      }
+
+      78% {
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(255%);
+        opacity: 0;
+      }
+    }
+
+    /* ── entrance: everything is wiped in behind a mask ───────────────────
+     Transform is reserved for the pointer parallax, so the reveal is done
+     with clip-path. Once the intro has run, .intro-done drops the clip
+     entirely — a live clip-path would open a stacking context on the About
+     card and trap its knob under the moss. */
+    .js .mask {
+      clip-path: inset(100% 0 0 0 round var(--mr, 0px));
+    }
+
+    .is-ready .mask {
+      clip-path: inset(0 0 0 0 round var(--mr, 0px));
+      transition: clip-path 1.05s var(--ease-out) var(--d, 0ms);
+    }
+
+    .js .mask-circle {
+      clip-path: circle(0% at 50% 50%);
+    }
+
+    .is-ready .mask-circle {
+      clip-path: circle(76% at 50% 50%);
+      transition: clip-path 1.1s var(--ease-out) var(--d, 0ms);
+    }
+
+    .js .fade {
+      opacity: 0;
+    }
+
+    .is-ready .fade {
+      opacity: 1;
+      transition: opacity 1.3s var(--ease) var(--d, 0ms);
+    }
+
+    .intro-done .mask,
+    .intro-done .mask-circle {
+      clip-path: none;
+      transition: none;
+    }
+
+    .card {
+      --mr: calc(46 * var(--u));
+    }
+
+    /* the dock drops in tile by tile; the capsule itself only fades, because
+     a clip on it would cut the pills off as they magnify past its edge */
+    .js .dock {
+      opacity: 0;
+    }
+
+    .is-ready .dock {
+      opacity: 1;
+      transition: opacity .8s var(--ease) 80ms;
+    }
+
+    .js .dock-item {
+      clip-path: inset(0 0 105% 0);
+    }
+
+    .is-ready .dock-item {
+      clip-path: inset(0 0 -30% 0);
+      transition: clip-path .9s var(--ease-out) var(--d, 0ms),
+        color .18s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+    }
+
+    .intro-done .dock-item {
+      clip-path: none;
+    }
+
+    /* A short rise under a fade rather than a full-height wipe: with nothing
+     cropping it, a 105% travel would start line one sitting on top of line
+     two. .headline itself carries the pointer parallax, so the transform has
+     to go on the inner <i>. */
+    .js .headline span i {
+      opacity: 0;
+      transform: translateY(calc(16 * var(--u)));
+    }
+
+    .is-ready .headline span i {
+      opacity: 1;
+      transform: none;
+      transition: opacity 1.05s var(--ease) var(--d, 0ms),
+        transform 1.25s var(--ease-out) var(--d, 0ms);
+    }
+
+    /* Each plate resolves like a low-bandwidth botanical transmission: a
+     stepped clip exposes the photograph while sampled pixel-dots gather along
+     the advancing edge (the dots themselves are painted by canvas).
+     Both plates scan across, the Ethos one a beat ahead of the Field Note. */
+    .js .portal-media {
+      clip-path: inset(0 100% 0 0 round calc(25 * var(--u)));
+    }
+
+    .is-ready .card--about .portal-media {
+      animation: portal-cut 1.45s steps(12, end) .92s both;
+    }
+
+    .is-ready .card--stove .portal-media {
+      animation: portal-cut 1.45s steps(12, end) 1.08s both;
+    }
+
+    .is-ready .card--about figure::after {
+      animation: portal-scan 1.45s steps(12, end) .92s both;
+    }
+
+    .is-ready .card--stove figure::after {
+      animation: portal-scan 1.45s steps(12, end) 1.08s both;
+    }
+
+    .intro-done .portal-media {
+      clip-path: none;
+      animation: none;
+    }
+
+    @keyframes portal-cut {
+      from {
+        clip-path: inset(0 100% 0 0 round calc(25 * var(--u)));
+      }
+
+      to {
+        clip-path: inset(0 0 0 0 round calc(25 * var(--u)));
+      }
+    }
+
+    /* The glow travels by animating its own offset, not by a translate
+     percentage. A translate is a percentage of the glow's width, so the
+     distance it covers depends on the plate's proportions — it overshot by
+     a quarter of the card here and rode ahead of the edge the whole way.
+     In calc() the travel is exactly the media box: 100% of the plate plus
+     the 9u of overscan at each end, at every breakpoint. */
+    @keyframes portal-scan {
+      0% {
+        left: calc(-13% - 9 * var(--u));
+        opacity: 0;
+      }
+
+      10% {
+        opacity: .75;
+      }
+
+      88% {
+        opacity: .55;
+      }
+
+      100% {
+        left: calc(87% + 9 * var(--u));
+        opacity: 0;
+      }
+    }
+
+    /* No clip on the canvas: the root draws itself in behind the survey pulse,
+     and a CSS wipe on top of that would be two reveals fighting each other.
+     The fade is only here to cover the first compiled frame. */
+    .is-ready #scene {
+      transition: opacity .45s var(--ease);
+    }
+
+    /* ── pointer parallax ────────────────────────────────────────────────
+     --px / --py are written on .hero once per frame (-1…1). Each layer
+     declares how far it rides (--pd, px at full deflection) and how much
+     it turns (--pr, degrees), which is what gives the plane its depth. */
+    .par {
+      transform:
+        perspective(1400px) translate3d(calc(var(--px, 0) * var(--pd, 0) * -1px),
+          calc(var(--py, 0) * var(--pd, 0) * -0.62px),
+          0) rotateY(calc(var(--px, 0) * var(--pr, 0) * 1deg)) rotateX(calc(var(--py, 0) * var(--pr, 0) * -0.7deg));
+    }
+
+    /* the floating knob turns about the About card's centre, not its own,
+     so it stays glued to the corner it belongs to */
+    .knob-float {
+      transform-origin: calc(-87 * var(--u)) calc(-74.5 * var(--u));
+    }
+
+    .card--about {
+      transform-origin: 50% 50%;
+    }
+
+    /* ══ parallax de puntero en las story sections ════════════════════
+       Las secciones story reciben del rAF del hero los mismos --px/--py
+       (page.js los publica en cada .story). Cada capa declara CUÁNTO viaja
+       (--pd px a plena deflexión) y CUÁNTO gira (--pr grados) — el mismo
+       lenguaje del hero, con recorridos más cortos: el scroll ya da la
+       sensación de profundidad, el puntero solo la acompaña.
+
+       Convención de planos (cerca = viaja más, contra el gesto): los
+       protagonistas (ave/pico/cards) van al frente; el vidrio/texto al
+       medio; los fondos (foliage/mist) casi quietos, a favor del gesto
+       (+) para que se sientan DETRÁS. Solo transform: cero reflow. */
+    .story .par-story {
+      /* translate/rotate individuales (no transform): componen con el
+         transform inline que GSAP deja en los .rise tras el reveal, en
+         vez de ser pisados por él. */
+      translate: calc(var(--px, 0) * var(--pd, 0) * -1px) calc(var(--py, 0) * var(--pd, 0) * -0.62px);
+      rotate: calc(var(--px, 0) * var(--pr, 0) * 1deg);
+    }
+
+    /* fondos: quietos, a favor del gesto (se leen detrás de todo) */
+    .story .par-story--back {
+      translate: calc(var(--px, 0) * var(--pd, 0) * 1px) calc(var(--py, 0) * var(--pd, 0) * 0.62px);
+    }
+
+    /* el colibrí ya vuela con su propia animación de flotación (transform
+       en keyframes): envolverlo pisaría la animación. Su capa .glass-figure
+       es la que se inclina — el ave viaja con la figura y el float queda. */
+
+    /* ── Cañón (glass): vidrio al medio, figura/ave al frente ── */
+    .story--glass .glass-card.par-story { --pd: 8; --pr: .8; }
+    .story--glass .glass-figure.par-story { --pd: 16; --pr: 1.6; }
+
+    /* fondo del glass: follaje + niebla casi fijos, a favor */
+    .story--glass .glass-foliage.par-story--back { --pd: 6; }
+    .story--glass .glass-mist.par-story--back { --pd: 10; }
+
+    /* ── Nevado (flip): plato al frente, texto al medio ── */
+    .story--flip figure.par-story { --pd: 16; --pr: 1.4; }
+    .story--flip .story-about.par-story { --pd: 7; --pr: .7; }
+
+    /* ── Rutas: las 4 cards al frente, escalonadas por profundidad ── */
+    .route-card.par-story:nth-child(1) { --pd: 16; --pr: 1.4; }
+    .route-card.par-story:nth-child(2) { --pd: 22; --pr: 1.8; }
+    .route-card.par-story:nth-child(3) { --pd: 16; --pr: 1.4; }
+    .route-card.par-story:nth-child(4) { --pd: 22; --pr: 1.8; }
+    #rutas .story-inner > .rise.par-story { --pd: 7; --pr: .6; }
+
+    /* ── Visitar (sunset): vidrio al medio, pico/CTA al frente ── */
+    .story--sunset .glass-card.par-story { --pd: 8; --pr: .8; }
+    .story--sunset .glass-peak.par-story { --pd: 16; --pr: 1.6; }
+    .story--sunset .visitar-cta.par-story { --pd: 12; --pr: 1; }
+    .story--sunset .glass-foliage.par-story--back { --pd: 6; }
+
+    /* coarse pointer (touch): sin efecto — igual que el dock del hero */
+    @media (hover: none), (pointer: coarse) {
+      .story .par-story,
+      .story .par-story--back {
+        translate: none;
+        rotate: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .story .par-story,
+      .story .par-story--back {
+        translate: none;
+        rotate: none;
+      }
+    }
+
+    /* ── keyboard focus ──────────────────────────────────────────────────── */
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, .85);
+      outline-offset: calc(4 * var(--u));
+      border-radius: calc(6 * var(--u));
+    }
+
+    .card .knob:focus-visible,
+    .knob--about:focus-visible,
+    .play:focus-visible {
+      outline-color: rgba(28, 34, 22, .9);
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+
+      .mask,
+      .mask-circle,
+      .fade,
+      #scene,
+      .dock,
+      .dock-item,
+      .headline span i {
+        opacity: 1 !important;
+        clip-path: none !important;
+        transform: none !important;
+        transition: none !important;
+      }
+
+      .par {
+        transform: none !important;
+      }
+
+      .portal-media {
+        clip-path: none !important;
+        animation: none !important;
+        transform: none !important;
+      }
+
+      .pixel-reveal,
+      .card figure::after {
+        display: none !important;
+      }
+
+      .portal-media img {
+        transform: none !important;
+        transition: none !important;
+      }
+
+      .scroll .track::after {
+        animation: none;
+      }
+
+      #scene {
+        transition: none;
+      }
+    }
+
+    /* ── narrow screens: one column, the moss becomes a band between the
+        copy and the cards (760 design units wide) ───────────────────────── */
+    @media (max-width:900px) {
+      :root {
+        --u: calc(100vw / 760);
+      }
+
+      .hero {
+        height: auto;
+        min-height: 100svh;
+      }
+
+      .stage {
+        position: relative;
+        left: auto;
+        top: auto;
+        margin: 0;
+        width: 100%;
+        height: calc(1625 * var(--u));
+      }
+
+      .hero::after {
+        background:
+          radial-gradient(90% 30% at 50% 74%, rgba(238, 243, 231, .40) 0%, rgba(238, 243, 231, .14) 46%, rgba(238, 243, 231, 0) 82%),
+          linear-gradient(180deg, rgba(238, 243, 231, 0) 62%, rgba(238, 243, 231, .05) 100%);
+      }
+
+      .guides i:nth-child(3) {
+        display: none;
+      }
+
+      .guides i:nth-child(1) {
+        left: calc(253 * var(--u)) !important;
+      }
+
+      .guides i:nth-child(2) {
+        left: calc(506 * var(--u)) !important;
+      }
+
+      /* one column: the labels come off and the dock keeps only its glyphs,
+       because at this scale the type would be four pixels tall */
+      /* Floored with max(), not left on the design unit alone: this breakpoint
+       runs from 900px down to 320px, so a pure --u dock is a 24px bar with
+       12px targets on a phone. The floor only bites at the small end. */
+      .dock-wrap {
+        top: calc(30 * var(--u));
+      }
+      .dock {
+        height: max(56px, calc(58 * var(--u)));
+        padding: max(6px, calc(6 * var(--u)));
+        gap: max(4px, calc(4 * var(--u)));
+        border-radius: max(17px, calc(18 * var(--u)));
+      }
+
+      .dock-item {
+        height: max(44px, calc(46 * var(--u)));
+        width: max(44px, calc(46 * var(--u)));
+        padding: 0;
+        border-radius: max(12px, calc(13 * var(--u)));
+      }
+
+      .dock-item span:not(.glyph) {
+        display: none;
+      }
+
+      .dock-item .glyph {
+        width: max(19px, calc(20 * var(--u)));
+        height: max(19px, calc(20 * var(--u)));
+      }
+
+      .dock-mark img {
+        width: 52%;
+        height: 52%;
+      }
+
+      .knob-float {
+        left: calc(644 * var(--u));
+        top: calc(1218 * var(--u));
+        transform-origin: calc(-264 * var(--u)) calc(-43 * var(--u));
+      }
+
+      .headline {
+        left: calc(34 * var(--u));
+        top: calc(128 * var(--u));
+        font-size: calc(62 * var(--u));
+        line-height: calc(66 * var(--u));
+      }
+
+      .lede {
+        left: calc(34 * var(--u));
+        top: calc(288 * var(--u));
+        width: calc(400 * var(--u));
+        font-size: calc(19 * var(--u));
+        line-height: calc(27 * var(--u));
+      }
+
+      /* one column: the frame keeps its aspect, re-anchored to the left rail */
+      .pill-clip {
+        left: calc(34 * var(--u));
+        top: calc(430 * var(--u));
+        width: calc(506 * var(--u));
+        height: calc(334 * var(--u));
+        margin: calc(-167 * var(--u)) 0 0 calc(-79 * var(--u));
+        clip-path: inset(calc(93 * var(--u)) calc(74 * var(--u)) calc(1 * var(--u)) calc(74 * var(--u)) round calc(76 * var(--u)));
+      }
+
+      .liquid-stage--explore {
+        --h: calc(74.4152 * var(--u));
+      }
+
+      .play-wrap {
+        display: none;
+      }
+
+      .stat {
+        gap: calc(11 * var(--u));
+      }
+
+      .stat .mark {
+        width: calc(36 * var(--u));
+        height: calc(36 * var(--u));
+      }
+
+      .stat dt {
+        font-size: calc(16 * var(--u));
+        line-height: calc(22 * var(--u));
+      }
+
+      .stat dd {
+        font-size: calc(16.5 * var(--u));
+        line-height: calc(24 * var(--u));
+      }
+
+      .stat--a {
+        left: calc(34 * var(--u));
+        top: calc(540 * var(--u));
+      }
+
+      .stat--b {
+        left: calc(396 * var(--u));
+        top: calc(540 * var(--u));
+      }
+
+      .card {
+        border-radius: calc(40 * var(--u));
+      }
+
+      .card--about {
+        left: calc(34 * var(--u));
+        top: calc(1050 * var(--u));
+        width: calc(692 * var(--u));
+        height: calc(250 * var(--u));
+      }
+
+      .card--about .label {
+        top: calc(96 * var(--u));
+      }
+
+      .card--about h2 {
+        top: calc(124 * var(--u));
+        width: calc(400 * var(--u));
+        font-size: calc(32 * var(--u));
+        line-height: calc(36 * var(--u));
+      }
+
+      .card--stove {
+        left: calc(34 * var(--u));
+        top: calc(1324 * var(--u));
+        width: calc(692 * var(--u));
+        height: calc(268 * var(--u));
+      }
+
+      .card--stove h2 {
+        font-size: calc(32 * var(--u));
+      }
+
+      /* one column: both plates become a thumbnail on the card's outer edge,
+       the Ethos one still anchored to the top */
+      .card--stove figure {
+        left: auto;
+        right: calc(16 * var(--u));
+        bottom: calc(16 * var(--u));
+        width: calc(300 * var(--u));
+        height: calc(150 * var(--u));
+      }
+
+      .card--about figure {
+        left: auto;
+        right: calc(16 * var(--u));
+        top: calc(16 * var(--u));
+        width: calc(224 * var(--u));
+        height: calc(218 * var(--u));
+      }
+
+      .card .knob {
+        right: calc(24 * var(--u));
+        bottom: calc(24 * var(--u));
+      }
+
+      .card--stove .knob {
+        right: calc(30 * var(--u));
+        bottom: calc(30 * var(--u));
+      }
+
+      .scroll {
+        left: calc(702 * var(--u));
+        top: calc(470 * var(--u));
+      }
+
+      .ghost {
+        font-size: calc(184 * var(--u));
+        letter-spacing: calc(14 * var(--u));
+        bottom: calc(660 * var(--u));
+        left: calc(-10 * var(--u));
+      }
+      .route-card figure{
+        height:95%!important;
+      }
+    }
+
+        /* ══ story sections — nevado + cañón del combeima ═══════════════════
+
+       Hablan el dialecto del hero: mismos tokens (--ink-soft, --rule,
+       --ease-out), mismas ventanas redondeadas sobre el campo oliva,
+       mismas reglas hairline. La costura con el hero es un gradiente
+       compartido: la luz ::after del hero ya muere hacia #383b34 y el
+       ::before de cada sección levanta ese mismo tono — una atmósfera
+       continua, no un borde.
+
+       Transición: GSAP ScrollTrigger con scrub (js/story.js) — el scroll
+       interpola la entrada y el plato hace parallax dentro de su marco,
+       en todos los viewports. Sin pin: anclar un hijo del grid rompía
+       la retícula y dejaba huecos muertos. .story--flip espeja la
+       composición (imagen a la izquierda).
+       ═════════════════════════════════════════════════════════════════ */
+
+    .story {
+      position: relative;
+      /* hojas apiladas: esquinas superiores redondeadas — cada sección
+         cubre a la anterior como una lámina con radio, no como un corte
+         duro. Sombra superior sutil para que la lámina se lea levantada. */
+      border-radius: max(calc(34 * var(--u)), 18px) max(calc(34 * var(--u)), 18px) 0 0;
+      box-shadow: 0 calc(-12 * var(--u)) calc(40 * var(--u)) rgba(8, 12, 8, .3);
+      background:
+        radial-gradient(60% 46% at 50% 0%, rgba(226, 233, 218, .07) 0%, rgba(226, 233, 218, 0) 70%),
+        #383b34;
+      padding-bottom:3em;
+    }
+
+    /* the seam: one shared atmosphere, not a hard border. The hero's light
+       ends dark at its bottom edge; this band lifts the same pale tone the
+       hero uses so the two fields read as one continuous atmosphere. */
+    .story::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(-120 * var(--u));
+      height: calc(120 * var(--u));
+      background: linear-gradient(180deg, rgba(56, 59, 52, 0) 0%, #383b34 100%);
+      pointer-events: none;
+    }
+
+    .story-inner {
+      position: relative;
+      width: min(calc(1264 * var(--u)), calc(100% - 2 * max(24px, calc(46 * var(--u)))));
+      margin: 0 auto;
+      padding: calc(110 * var(--u)) 0 calc(96 * var(--u));      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: calc(96 * var(--u));
+      align-items: center;
+    }
+
+    /* eyebrow, in the hero's stat-label voice */
+    .story .eyebrow {
+      font-size: calc(13.5 * var(--u));
+      font-weight: 300;
+      letter-spacing: calc(2.4 * var(--u));
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .story h2 {
+      margin-top: calc(26 * var(--u));
+      font-size: calc(54 * var(--u));
+      line-height: calc(58 * var(--u));
+      font-weight: 300;
+      letter-spacing: calc(-0.4 * var(--u));
+      color: var(--ink);
+    }
+
+    .story h2 i {
+      font-style: normal;
+      color: rgba(231, 246, 142, .71);
+    }
+
+    /* the "about" inner panel: a quieter echo of the hero's card plates —
+       deep ground, hairline frame, rounded corners, one soft blur layer */
+    .story-about {
+      margin-top: calc(48 * var(--u));
+      background: rgba(24, 28, 20, .35);
+      border: 1px solid var(--rule);
+      border-radius: calc(34 * var(--u));
+      padding: calc(40 * var(--u)) calc(44 * var(--u));
+      backdrop-filter: blur(calc(10 * var(--u)));
+      -webkit-backdrop-filter: blur(calc(10 * var(--u)));
+    }
+
+    .story-about h3 {
+      font-size: calc(20 * var(--u));
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .story-about ul {
+      margin-top: calc(22 * var(--u));
+      list-style: none;
+      display: grid;
+      gap: calc(14 * var(--u));
+    }
+
+    .story-about li {
+      position: relative;
+      padding-left: calc(22 * var(--u));
+      font-size: calc(16.5 * var(--u));
+      line-height: calc(24 * var(--u));
+      font-weight: 300;
+      color: var(--ink-soft);
+    }
+
+    .story-about li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: calc(11 * var(--u));
+      width: calc(5 * var(--u));
+      height: calc(5 * var(--u));
+      border-radius: 50%;
+      background: rgba(231, 246, 142, .71);
+    }
+
+    /* the figure: the hero's rounded window over deep ground */
+    .story figure {
+      position: relative;
+      border-radius: calc(34 * var(--u));
+      overflow: hidden;
+      isolation: isolate;
+      background: #263025;
+      aspect-ratio: 2 / 3;
+    }
+
+    /* scrim al pie del plato: garantiza la legibilidad del micro-dato
+       sobre fotos claras (las rocas del cañón) sin tocar la foto */
+    .story figure::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 38%;
+      background: linear-gradient(180deg, rgba(10, 14, 8, 0) 0%, rgba(10, 14, 8, .58) 100%);
+      pointer-events: none;
+    }
+
+    .story figure img {
+      position: absolute;
+      left: 0;
+      /* overscan: el parallax scrub desplaza la imagen ±6% y el marco no
+         debe descubrir bordes */
+      top: -6%;
+      width: 100%;
+      height: 112%;
+      object-fit: cover;
+      /* the olive field casts itself over the plate, cool shadow at the foot:
+         the same grade the hero's plates read through */
+      filter: saturate(.72) contrast(.96) brightness(.94);
+    }
+
+    /* micro-dato, in the stat voice */
+    .story figure figcaption {
+      position: absolute;
+      left: calc(26 * var(--u));
+      bottom: calc(22 * var(--u));
+      display: flex;
+      gap: calc(26 * var(--u));
+      font-size: calc(13.5 * var(--u));
+      color: var(--ink-soft);
+      text-shadow: 0 calc(2 * var(--u)) calc(16 * var(--u)) rgba(10, 14, 8, .6);
+    }
+
+    .story figure figcaption b {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    /* la costura base pinta el oliva del hero; aquí la costura muere hacia
+       el esmeralda profundo de esta sección, no hacia el oliva */
+    .story--glass::before {
+      background: linear-gradient(180deg, rgba(13, 46, 38, 0) 0%, #0d2e26 100%);
+    }
+
+    /* ══ costura hero → cañón: UNA escena continua, no dos bloques ══════
+       El corte duro ocurre porque en desktop el overflow:hidden del sticky
+       stack recorta la niebla ::before (pintada FUERA de la sección), y la
+       lámina sube con su borde recto sobre el pool de luz del hero. Todo
+       el trabajo se pinta AQUÍ DENTRO de #combeima, sin tocar el hero:
+
+       1) #combeima::before ya no es niebla sino ZÓCALO del hero: la banda
+          superior repite el oliva #383b34 del suelo del hero y muere en
+          el esmeralda propio. Al cubrir, el ojo pasa del oliva al oliva —
+          el cambio de escena queda bajo el horizonte, no en el borde.
+
+       2) .glass-foliage lleva mask-image lineal: su techo (foto del cañón
+          difuminada) se disuelve en transparente ANTES del borde — nada
+          corta en seco; la niebla emerge del zócalo oliva.
+
+       3) .glass-mist: velo de niebla propio de la sección (radial tenue,
+          con la luz pálida del hero pero desaturada al verde) que baja
+          desde el techo y se funde con el follaje. Estático (cero coste
+          en scroll), decorativo (aria-hidden), pointer-events none. */
+    #combeima::before {
+      background:
+        radial-gradient(64% 130% at 50% 0%, rgba(238, 243, 231, .15) 0%, rgba(238, 243, 231, .05) 52%, rgba(238, 243, 231, 0) 80%),
+        linear-gradient(180deg,
+          #464a41 0%,
+          #3b4a40 24%,
+          #204237 58%,
+          rgba(13, 46, 38, 0) 100%);
+    }
+
+    /* el zócalo vive DENTRO de la lámina (top 0, no negativo): así el
+       overflow:hidden del sticky stack nunca lo recorta. En narrow el
+       block inferior lo reajusta. */
+    #combeima::before {
+      top: 0;
+      height: calc(190 * var(--u));
+    }
+
+    /* narrow: el zócalo es banda, no foco — el pool del hero en móvil es
+       menos definido, así que la lámina solo insinúa la luz */
+    @media (max-width:900px) {
+      #combeima::before {
+        background:
+          linear-gradient(180deg,
+            #43473e 0%,
+            #3b4a40 22%,
+            #204237 56%,
+            rgba(13, 46, 38, 0) 100%);
+        height: calc(150 * var(--u));
+      }
+    }
+
+    /* el follaje difuminado se disuelve hacia su techo: sin borde de foto
+       contra el zócalo oliva — la textura emerge de la niebla. Solo en
+       #combeima: #visitar comparte .story--glass pero su costura es la
+       sunset (con rutas arriba), no el charco del hero. */
+    #combeima .glass-foliage {
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.55) calc(120 * var(--u)), #000 calc(240 * var(--u)));
+      mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.55) calc(120 * var(--u)), #000 calc(240 * var(--u)));
+    }
+
+    /* niebla continua del lado del cañón: misma luz pálida del hero
+       (238,243,231) desaturada al verde, como exhalación del valle */
+    .glass-mist {
+      position: absolute;
+      left: -4%;
+      right: -4%;
+      top: calc(-40 * var(--u));
+      height: calc(340 * var(--u));
+      background:
+        radial-gradient(58% 62% at 30% 18%, rgba(238, 243, 231, .10) 0%, rgba(238, 243, 231, 0) 70%),
+        radial-gradient(46% 56% at 74% 8%, rgba(238, 243, 231, .07) 0%, rgba(238, 243, 231, 0) 66%),
+        radial-gradient(70% 48% at 52% 0%, rgba(226, 233, 218, .08) 0%, rgba(226, 233, 218, 0) 74%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ══ costura rutas → visitar: misma receta de continuidad que ════════
+       hero → cañón, pero templada al atardecer de esta lámina. El plinto
+       repite el oliva #383b34 de la base de rutas (el ojo cruza de oliva
+       a oliva; el cambio de escena —la entrada del calor sunset— ocurre
+       bajo el horizonte), el follaje de la foto se disuelve antes del
+       borde y la niebla pálida del sistema glass cierra la unión.
+       Todo pintado DENTRO de la lámina: lo exterior lo recorta el stack. */
+    #visitar::before {
+      top: 0;
+      height: calc(190 * var(--u));
+      background:
+        radial-gradient(64% 130% at 50% 0%, rgba(238, 243, 231, .12) 0%, rgba(238, 243, 231, .04) 52%, rgba(238, 243, 231, 0) 80%),
+        linear-gradient(180deg,
+          #383b34 0%,
+          #3b3a33 24%,
+          #2c2a24 58%,
+          rgba(13, 46, 38, 0) 100%);
+    }
+
+    /* narrow: banda simple, sin foco — igual que el zócalo del cañón */
+    @media (max-width:900px) {
+      #visitar::before {
+        background:
+          linear-gradient(180deg,
+            #383b34 0%,
+            #35332c 22%,
+            #2c2a24 56%,
+            rgba(13, 46, 38, 0) 100%);
+        height: calc(150 * var(--u));
+      }
+    }
+
+    /* el follaje de la foto (telesférico) se disuelve hacia su techo:
+       sin borde de foto contra el zócalo oliva — mismo trato que el
+       follaje del cañón. Solo #visitar: el sunset es su costura propia. */
+    #visitar .glass-foliage {
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .55) calc(120 * var(--u)), #000 calc(240 * var(--u)));
+      mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, .55) calc(120 * var(--u)), #000 calc(240 * var(--u)));
+    }
+
+    /* niebla de la costura visitar: la luz pálida del sistema glass,
+       templada cálida (232,214,180) para casar con el atardecer */
+    #visitar .glass-mist {
+      background:
+        radial-gradient(58% 62% at 30% 18%, rgba(238, 243, 231, .09) 0%, rgba(238, 243, 231, 0) 70%),
+        radial-gradient(46% 56% at 74% 8%, rgba(232, 214, 180, .09) 0%, rgba(232, 214, 180, 0) 66%),
+        radial-gradient(70% 48% at 52% 0%, rgba(226, 233, 218, .07) 0%, rgba(226, 233, 218, 0) 74%);
+    }
+
+    /* ── entrada: el estado inicial lo fija js/story.js (gsap.set); el CSS
+       pinta solo el reposo — sin JS (y con reduced-motion) la sección
+       se ve completa. Ninguna transición CSS aquí: pelearía el scrub. */
+
+    /* ── variante espejo: la IMAGEN abre a la izquierda (protagonista
+       primero) y el texto la acompaña a la derecha ── */
+    .story--flip .story-inner {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    }
+
+    /* ── apilado cinematográfico (≥901px): la sección entra, se fija en
+       top:0 y la siguiente se desliza POR ENCIMA y queda fija también —
+       sticky nativo (GSAP recomienda sticky sobre pin, que rompía el
+       grid); el orden del DOM pone la 3 sobre la 2 y el ::before de
+       cada sección mantiene la niebla de la costura al cubrir.
+       Cada sección mide exactamente 100svh: para que "quede fija" de
+       verdad, su contenido debe caber en el viewport (la figura llena
+       la columna; el recorte lo hace object-fit, no el layout). ── */
+    @media (min-width:901px) {
+      .story {
+        position: sticky;
+        top: 0;
+        height: 100svh;
+        overflow: hidden;
+      }
+
+      .story .story-inner {
+        height: 100%;
+        max-height: 100%;
+        padding: calc(48 * var(--u)) 0;
+      }
+
+      .story figure {
+        aspect-ratio: auto;
+        height: 100%;
+        min-height: 0;
+      }
+    }
+
+    /* ── narrow: the reference's editorial column stacks over the photo ── */
+    @media (max-width:900px) {
+      .story-inner {
+        grid-template-columns: 1fr;
+        gap: calc(48 * var(--u));
+        padding: calc(96 * var(--u)) 0 calc(120 * var(--u));
+      }
+
+      .story h2 {
+        font-size: calc(44 * var(--u))!important;
+        line-height: calc(48 * var(--u))!important;
+        text-align: center;
+      }
+
+      .story-about {
+        padding: calc(30 * var(--u)) calc(30 * var(--u));
+      }
+      .route-card .label {
+       left: calc(300 * var(--u))!important;
+      }
+    }
+
+    /* ══ variante glassmorphism — sección del Cañón (colibrí) ═══════════
+
+       Misma información y jerarquía del componente .story, pero con el
+       patrón de la referencia: vidrio esmerilado sobre naturaleza oscura.
+       Habla el dialecto de la página (misma tipografía Lexend, mismo
+       acento lima en los bullets, --ease-out) — la diferencia es el
+       material: tarjeta de vidrio oscuro (blur 22px, borde rgba blanco
+       .15, sombra profunda) sobre un follaje desenfocado, y el colibrí
+       solapado sobre el borde del vidrio para la profundidad.
+       ═════════════════════════════════════════════════════════════════ */
+
+    .story--glass {
+      background:
+        radial-gradient(58% 44% at 78% 22%, rgba(24, 68, 56, .5) 0%, rgba(24, 68, 56, 0) 70%),
+        linear-gradient(160deg, #1a3d33 0%, #0d2e26 78%);
+    }
+
+    /* follaje desenfocado en el fondo: la foto del cañón a gran escala,
+       blur alto + overlay oscuro — profundidad sin competir con el vidrio */
+    .story--glass .glass-foliage {
+      position: absolute;
+      inset: -4%;
+      background: url('../inner-green-assets/canyon-combeima.jpg') center / cover no-repeat;
+      filter: blur(5px) saturate(.85) brightness(.5);
+      transform: scale(1.06);
+      pointer-events: none;
+    }
+
+    /* proporción de la referencia: la tarjeta domina y termina SOBRE el
+       ave — el colibrí se posa en su borde derecho. Las columnas y el
+       ancho real se definen en el bloque ≥901 (abajo): en narrow la
+       sección se apila y estas fracciones no aplican. */
+
+    /* ── tarjeta de vidrio oscuro ── */
+    .story--glass .glass-card {
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(165deg, rgba(30, 40, 35, .32), rgba(20, 20, 20, .25));
+      -webkit-backdrop-filter: blur(22px);
+      backdrop-filter: blur(22px);
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: calc(34 * var(--u));
+      box-shadow: 0 calc(8 * var(--u)) calc(32 * var(--u)) rgba(0, 0, 0, .25);
+      padding: calc(40 * var(--u)) calc(44 * var(--u));
+    }
+
+    /* badge pill: borde sutil, uppercase con tracking amplio */
+    .story--glass .glass-badge {
+      display: inline-block;
+      padding: calc(8 * var(--u)) calc(18 * var(--u));
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: calc(999 * var(--u));
+      font-size: calc(12 * var(--u));
+      font-weight: 400;
+      letter-spacing: calc(3 * var(--u));
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .8);
+    }
+
+    .story--glass h2 {
+      margin-top: calc(28 * var(--u));
+      color: #fff;
+    }
+
+    /* subtítulo bold secundario */
+    .story--glass .glass-lede {
+      margin-top: calc(14 * var(--u));
+      font-size: calc(21 * var(--u));
+      font-weight: 700;
+      letter-spacing: calc(-0.2 * var(--u));
+      color: rgba(255, 255, 255, .92);
+    }
+
+    /* el panel interior hereda la estructura; el vidrio ya aporta el fondo,
+       así que aquí solo un velo más oscuro para separar del card */
+    .story--glass .story-about {
+      margin-top: calc(34 * var(--u));
+      background: rgba(10, 16, 12, .28);
+    }
+
+    /* ── figura: sin ventana fotográfica — el colibrí vuela libre ──.
+       z arriba del card (z2): el pico entra NÍTIDO sobre el vidrio —
+       el solape con foco en el ave es la sensación de profundidad
+       exacta de la referencia. */
+    .story--glass .glass-figure {
+      position: relative;
+      z-index: 2;
+      border-radius: 0;
+      overflow: visible;
+      background: none;
+      aspect-ratio: auto;
+      min-height: calc(430 * var(--u));
+    }
+
+    /* sin foto dentro del marco, el scrim del pie no pinta nada: se apaga */
+    .story--glass .glass-figure::before {
+      content: none;
+    }
+
+    /* glow sutil verde/turquesa tras el colibrí — lo integra con la paleta.
+       Insets negativos: el ave se ancla al contenedor (no a la figura), así
+       que el halo la sigue hacia la izquierda, sobre el vidrio. */
+    .story--glass .glass-glow {
+      position: absolute;
+      inset: 8% -28% 12% -34%;
+      background: radial-gradient(52% 46% at 55% 46%, rgba(45, 212, 168, .2) 0%, rgba(231, 246, 142, .07) 45%, rgba(13, 46, 38, 0) 72%);
+      filter: blur(calc(6 * var(--u)));
+      pointer-events: none;
+    }
+
+    /* el colibrí: dominante, en diagonal, posado SOBRE el borde derecho
+       del vidrio. El webp está recortado al bbox del ave (1303×912, ~2%
+       de margen). En narrow vuela bajo la tarjeta (bloque ≤900); en
+       desktop el bloque ≥901 fija su escala y su anclaje al contenedor.
+
+       Tratamiento de color: el ave se integra con la atmósfera del sitio
+       (no blanco ni colores naturales crudos); se lee como parte del
+       mundo visual, iluminada por la misma luz que el vidrio. */
+    .story--glass .glass-bird {
+      position: absolute;
+      left: -2%;
+      top: 50%;
+      width: 104%;
+      max-width: none;
+      transform: translateY(-50%) rotate(-8deg);
+      filter:
+        drop-shadow(0 calc(18 * var(--u)) calc(38 * var(--u)) rgba(0, 0, 0, .42))
+        saturate(.72) contrast(1.04) brightness(.92)
+        sepia(.08) hue-rotate(-4deg);
+      animation: bird-float 3.8s var(--ease) infinite;
+      will-change: transform;
+    }
+
+    @keyframes bird-float {
+      0%, 100% { transform: translateY(calc(-50% - 7 * var(--u))) rotate(-8deg); }
+      50% { transform: translateY(calc(-50% + 7 * var(--u))) rotate(-6deg); }
+    }
+
+    /* micro-dato libre, bajo el pájaro — voz stat como en las otras secciones */
+    .story--glass .glass-figure figcaption {
+      position: absolute;
+      left: calc(6 * var(--u));
+      bottom: calc(-8 * var(--u));
+      text-shadow: 0 calc(2 * var(--u)) calc(16 * var(--u)) rgba(4, 12, 9, .7);
+    }
+
+    /* ── desktop: tarjeta centrada + ave posada sobre su borde ──
+       El inner usa el MISMO ancho que las otras secciones (1264u): la
+       sección respira centrada, no a todo lo ancho. gap 0: la columna
+       derecha (32fr ≈ 405u) solo reserva el sitio del ave, posicionada
+       en ABSOLUTO contra la figura — left −45% hunde la cabeza/pico
+       ~140u DENTRO del vidrio (solape real, no rozar el borde);
+       alas/cola cantan hacia la derecha sin cortarse en el viewport
+       (solo sangran dentro del margen de página). */
+    @media (min-width:901px) {
+      /* overflow heredado hidden del sticky stack: recorta follaje/glow/ave
+         al rect redondeado (todo el protagonismo queda dentro de la sección) */
+
+      .story--glass .story-inner {
+        width: min(calc(1264 * var(--u)), calc(100% - 2 * max(24px, calc(46 * var(--u)))));
+        grid-template-columns: minmax(0, 68fr) minmax(0, 32fr);
+        gap: 0;
+      }
+
+      .story--glass .glass-figure {
+        min-height: 0;
+        height: 100%;
+      }
+
+      .story--glass .glass-bird {
+        left: -45%;
+        width: auto;
+        height: calc(440 * var(--u));
+      }
+    }
+
+    /* ── narrow: tarjeta arriba, colibrí debajo; blur menor por performance ── */
+    @media (max-width:900px) {
+      .story--glass .story-inner {
+        gap: calc(56 * var(--u));
+      }
+
+      .story--glass .glass-card {
+        padding: calc(30 * var(--u)) calc(30 * var(--u));
+      }
+
+      .story--glass .glass-foliage {
+        /* sin overflow de sección en narrow: el follaje debe vivir dentro
+           del rect redondeado (sin él, tapa las esquinas del radio) */
+        inset: 0;
+        transform: none;
+        border-radius: inherit;
+        filter: blur(11px) saturate(.85) brightness(.5);
+      }
+    }
+
+    /* reduced-motion: sin flotación (el estado queda estático y completo) */
+    @media (prefers-reduced-motion: reduce) {
+      .story--glass .glass-bird {
+        animation: none;
+      }
+    }
+
+    /* ══ sección de rutas — 4 cards tipo hero ═══════════════════════════
+       Habla el mismo dialecto: reutiliza .card / .portal / .knob del hero,
+       pero en rejilla de 4 en vez de posición absoluta. Cada card lleva su
+       propia atmósfera de fondo (gradientes CSS hasta que se peguen fotos
+       reales) y su propio delay de entrada para que elreveal sea escalonado. ── */
+
+    /* #rutas usa story-inner en UNA columna (los otros story son editoriales
+       1.3fr/1fr; aquí el header y el grid van a sangre). Sin esto el grid cae
+       en la columna 1 y las 4 cards salen miniaturas. */
+    #rutas .story-inner {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;   /* el grid heredaría align-items:center del story base */
+      gap: 0;
+    }
+
+    /* header de rutas: eyebrow+título a la izquierda, lede alineado a la
+       derecha en desktop (mismo equilibrio que el hero), apilado en móvil */
+    #rutas .rise {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: calc(24 * var(--u)) calc(48 * var(--u));
+    }
+
+    #rutas .rise .eyebrow {
+      flex: 1 1 100%;
+    }
+
+    #rutas .rise h2 {
+      flex: 0 1 auto;
+      width: auto;
+      margin-top: 0;
+    }
+
+    #rutas .lede {
+      flex: 1 1 calc(480 * var(--u));
+      align-self: flex-end;
+      justify-self: end;
+      max-width: calc(480 * var(--u));
+      text-align: left;
+    }
+
+    .routes-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: calc(22 * var(--u));
+      margin-top: calc(60 * var(--u));
+      align-items: stretch;
+    }
+
+    .route-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      /* altura propia: todo el contenido interno es absolute (figure/label/
+         h2/knob). En móvil/tablet manda el ratio 2:3; en desktop el alto lo
+         da grid-auto-rows (ver @media 901px) para que header+cards quepan
+         en 100svh. */
+      aspect-ratio: 2 / 3;
+      background: var(--card);
+      border-radius: calc(30 * var(--u));
+      box-shadow: 0 calc(22 * var(--u)) calc(52 * var(--u)) rgba(16, 21, 13, .28);
+      overflow: hidden;
+      transition: box-shadow .7s var(--ease);
+    }
+
+    .route-card:hover {
+      box-shadow: 0 calc(32 * var(--u)) calc(72 * var(--u)) rgba(16, 21, 13, .34);
+    }
+
+    .route-card .label {
+      position: absolute;
+      left: calc(38 * var(--u));
+      top: calc(45 * var(--u));
+      font-size: calc(15.5 * var(--u));
+      font-weight: 300;
+      color: var(--card-label);
+      letter-spacing: calc(1 * var(--u));
+      text-transform: uppercase;
+      z-index: 3;
+    }
+
+    .route-card h2 {
+      position: absolute;
+      left: calc(38 * var(--u));
+      right: calc(38 * var(--u));
+      top: calc(64 * var(--u));
+      font-size: calc(24 * var(--u));
+      line-height: calc(26 * var(--u));
+      font-weight: 400;
+      letter-spacing: calc(-0.5 * var(--u));
+      color: var(--card-ink);
+      z-index: 3;
+    }
+
+    /* el portal de cada ruta replica la Field Note del hero: marco redondeado
+       al pie de la card, label y título oscuros sobre el fondo claro arriba.
+       top 178u: deja respirar títulos de 2–3 líneas (Teleférico…) sin pisar
+       el marco ni chocar con el knob. */
+    .route-card figure {
+      position: absolute;
+      top: calc(178 * var(--u));
+      bottom: calc(14 * var(--u));
+      left: calc(14 * var(--u));
+      right: calc(14 * var(--u));
+      border-radius: calc(34 * var(--u));
+      overflow: hidden;
+      isolation: isolate;
+      background: #263025;
+      height:250px;
+
+      /* atmósfera placeholder hasta que lleve img real */
+      background-image:
+        linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 60%),
+        radial-gradient(80% 100% at 50% 0%, var(--route-atmos) 0%, #263025 90%);
+    }
+
+    .route-card .portal-media {
+      position: absolute;
+      /* overscan de 9u para el parallax — la figura recorta con su radius */
+      inset: calc(-9 * var(--u));
+      z-index: 1;
+      will-change: transform, clip-path;
+      transform:
+        perspective(900px) translate3d(calc(var(--px, 0) * -11px), calc(var(--py, 0) * -7px), 0)
+          rotateY(calc(var(--px, 0) * -1.4deg)) rotateX(calc(var(--py, 0) * .9deg));
+      transform-origin: 50% 50%;
+    }
+
+    .route-card .portal-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.08);
+      filter: saturate(.92) contrast(1.03);
+      transition: transform 1.25s var(--ease-out), filter .8s var(--ease);
+    }
+
+    .route-card:hover .portal-media img {
+      transform: scale(1.13);
+      filter: saturate(1.04) contrast(1.04);
+    }
+
+    .route-card .pixel-reveal {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      mix-blend-mode: screen;
+    }
+
+    .route-card figure::after {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      filter: blur(calc(2 * var(--u)));
+      opacity: 0;
+      pointer-events: none;
+      top: 0;
+      bottom: 0;
+      width: 26%;
+      left: calc(-13% - 9 * var(--u));
+      background: linear-gradient(90deg, transparent, rgba(229, 244, 209, .2) 42%, rgba(252, 255, 246, .72) 54%, transparent);
+    }
+
+    .route-card .knob {
+      position: absolute;
+      right: calc(26 * var(--u));
+      bottom: calc(26 * var(--u));
+      width: calc(54 * var(--u));
+      height: calc(54 * var(--u));
+      border: 0;
+      border-radius: 50%;
+      cursor: pointer;
+      background: #fbfcf8;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(16, 21, 13, .18);
+      transition: transform .5s var(--ease-out), background .4s var(--ease);
+      z-index: 4;
+    }
+
+    .route-card .knob:hover {
+      transform: scale(1.1) rotate(8deg);
+      background: #fff;
+    }
+
+    .route-card .knob svg {
+      width: calc(19 * var(--u));
+      height: calc(19 * var(--u));
+      display: block;
+      color: #3f453a;
+    }
+
+    /* atmósferas placeholder por ruta (reemplazar con fotos reales) */
+    .route-card--cascada figure {
+      --route-atmos: rgba(120, 190, 200, .55);
+    }
+
+    .route-card--termales figure {
+      --route-atmos: rgba(220, 150, 90, .5);
+    }
+
+    .route-card--oso figure {
+      --route-atmos: rgba(70, 120, 90, .55);
+    }
+
+    .route-card--telesferico figure {
+      --route-atmos: rgba(150, 170, 120, .5);
+    }
+
+    /* escalonado de entrada: cada card revela su portal un beat después */
+    .is-ready .route-card--cascada .portal-media {
+      animation: portal-cut 1.45s steps(12, end) .94s both;
+    }
+    .is-ready .route-card--cascada figure::after {
+      animation: portal-scan 1.45s steps(12, end) .94s both;
+    }
+
+    .is-ready .route-card--termales .portal-media {
+      animation: portal-cut 1.45s steps(12, end) 1.04s both;
+    }
+    .is-ready .route-card--termales figure::after {
+      animation: portal-scan 1.45s steps(12, end) 1.04s both;
+    }
+
+    .is-ready .route-card--oso .portal-media {
+      animation: portal-cut 1.45s steps(12, end) 1.14s both;
+    }
+    .is-ready .route-card--oso figure::after {
+      animation: portal-scan 1.45s steps(12, end) 1.14s both;
+    }
+
+    .is-ready .route-card--telesferico .portal-media {
+      animation: portal-cut 1.45s steps(12, end) 1.24s both;
+    }
+    .is-ready .route-card--telesferico figure::after {
+      animation: portal-scan 1.45s steps(12, end) 1.24s both;
+    }
+
+    /* responsive: 2×2 en tablet, 1×1 en móvil. El layout interno de la card
+       es idéntico en todos los breakpoints (todo escala con --u). */
+    @media (max-width: 1160px) and (min-width: 901px) {
+      .routes-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: calc(20 * var(--u));
+      }
+    }
+
+    /* Desktop: la sección es sticky 100svh — header + cards deben caber.
+       Alto de fila = espacio restante bajo el header, con tope por ratio
+       para que la card no se estire en pantallas muy altas. */
+    @media (min-width: 901px) {
+      #rutas .story-inner {
+        /* el header no compite por el alto: su contenido fluye */
+        padding-top: calc(40 * var(--u));
+        padding-bottom: calc(40 * var(--u));
+      }
+
+      .routes-grid {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        grid-auto-rows: minmax(calc(300 * var(--u)), 1fr);
+        margin-top: calc(44 * var(--u));
+      }
+
+      .route-card {
+        /* en desktop el alto lo fija la fila del grid, no el ratio */
+        aspect-ratio: auto;
+        min-height: 0;
+      }
+
+      .route-card h2 {
+        /* margen de reserva para 2 líneas de título sin chocar el knob */
+        padding-right: calc(64 * var(--u));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .routes-grid {
+        grid-template-columns: 1fr !important;
+        grid-auto-rows: 1fr !important;
+        align-items: stretch !important;
+        gap: calc(18 * var(--u)) !important;
+        margin-top: calc(40 * var(--u)) !important;
+      }
+
+      .route-card .knob {
+        /* objetivo táctil ≥44px: --u encoge el knob por debajo en móvil */
+        width: max(calc(58 * var(--u)), 44px) !important;
+        height: max(calc(58 * var(--u)), 44px) !important;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .route-card .portal-media {
+        clip-path: none !important;
+        animation: none !important;
+        transform: none !important;
+      }
+      .route-card figure::after,
+      .route-card .pixel-reveal {
+        display: none !important;
+      }
+      .route-card .portal-media img,
+      .route-card .portal-media {
+        transition: none !important;
+      }
+      .route-card:hover .portal-media img {
+        transform: none !important;
+      }
+    }
+
+    /* ══ visitar — cierre del recorrido (variante sunset del glass) ════
+       Reutiliza todo el sistema glass de #combeima: mismo vidrio (blur 22,
+       borde rgba .15), mismo badge/bullets, misma figura con protagonista
+       superpuesto. Dos diferencias para el cierre narrativo: la atmósfera
+       vira cálida (atardecer del cañón) y el protagonista es el Nevado en
+       retrato — el destino al que conduce todo el recorrido. El sticky
+       stack y el depth effect los aporta .story, sin JS nuevo. */
+
+    .story--sunset {
+      background:
+        radial-gradient(58% 44% at 24% 18%, rgba(122, 82, 46, .35) 0%, rgba(122, 82, 46, 0) 70%),
+        linear-gradient(200deg, #2c2a24 0%, #171f1a 62%, #0d2e26 100%);
+    }
+
+    /* la costura muere hacia el mismo esmeralda del glass — continuidad */
+    .story--sunset::before {
+      background: linear-gradient(180deg, rgba(13, 46, 38, 0) 0%, #0d2e26 100%);
+    }
+
+    .story--sunset .glass-foliage {
+      background-image: url('../inner-green-assets/telesferico_hacienda_primavera.webp');
+    }
+
+    /* cabecera editorial centrada (badge + titular) en todos los anchos:
+       en desktop es la fila 1 a sangre del panel; en móvil apila centrada */
+    .story--sunset .glass-head {
+      text-align: center;
+    }
+
+    /* subtítulo en la voz glass-lede pero regular — el bold era del dato duro */
+    .story--sunset .glass-sub {
+      margin-top: calc(14 * var(--u));
+      font-size: calc(17 * var(--u));
+      font-weight: 300;
+      line-height: calc(24 * var(--u));
+      color: rgba(255, 255, 255, .78);
+    }
+
+    /* glow cálido tras el nevado (en vez del verde/turquesa del colibrí) */
+    .story--sunset .glass-glow {
+      background: radial-gradient(52% 46% at 55% 46%, rgba(232, 168, 96, .18) 0%, rgba(231, 246, 142, .06) 45%, rgba(13, 46, 38, 0) 72%);
+    }
+
+    /* el protagonista de visitar: recorte panorámico con alfa del valle al
+       atardecer. Mismo tratamiento de integración que el colibrí (sombra
+       + integración de color al sunset); sin la rotación de vuelo ni la
+       flotación — el paisaje es quieta. El solape con el vidrio se define
+       en el bloque desktop. */
+    .story--sunset .glass-peak {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: none;
+      height: auto;
+      border-radius: 0;
+      filter:
+        drop-shadow(0 calc(18 * var(--u)) calc(38 * var(--u)) rgba(0, 0, 0, .42))
+        saturate(.8) contrast(1.05) brightness(.9);
+    }
+
+    /* pie editorial del paisaje: tira alineada con la imagen (hairline
+       arriba + label y dato justificados a los extremos) — voz stat como
+       en las otras secciones, hereda la tipografía del sistema */
+    .story--sunset .glass-figure figcaption {
+      /* anula el anclaje absoluto del pie del colibrí (base glass):
+         aquí es tira en flujo, alineada con la imagen */
+      position: static;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: calc(16 * var(--u));
+      width: 100%;
+      margin: calc(14 * var(--u)) 0 0;
+      padding-top: calc(14 * var(--u));
+      border-top: 1px solid rgba(255, 255, 255, .18);
+      font-size: calc(13 * var(--u));
+      letter-spacing: calc(2 * var(--u));
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .78);
+    }
+
+    .story--sunset .glass-figure figcaption b {
+      font-weight: 500;
+      color: #fff;
+    }
+
+    /* ventanita del portal: envuelve la img para que el clip-path y el
+       haz de luz recorten el paquete imagen (la img lleva su propio
+       drop-shadow — el clip-path en la img lo cortaría). Sin JS/reduced
+       motion la ventana está abierta (sin clip): mejora progresiva. */
+    .story--sunset .glass-window {
+      position: relative;
+      display: block;
+      width: 100%;
+    }
+
+    /* haz de luz del portal (mismo dialecto que figure::after del hero):
+       barra vertical screen-blend que viaja con el borde del corte */
+    .story--sunset .glass-beam {
+      position: absolute;
+      top: calc(-6 * var(--u));
+      bottom: calc(-6 * var(--u));
+      left: -4%;
+      width: calc(10 * var(--u));
+      background: linear-gradient(90deg, rgba(231, 246, 142, 0), rgba(231, 246, 142, .5) 50%, rgba(231, 246, 142, 0));
+      filter: blur(calc(2 * var(--u)));
+      mix-blend-mode: screen;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* sin clip por defecto: solo .js lo oculta antes de armar el reveal */
+    .js .story--sunset .glass-window {
+      clip-path: inset(-6% 100% -6% -2% round calc(24 * var(--u)));
+    }
+
+    /* estado revelado (clase que arma story.js al entrar en viewport):
+       el mismo corte escalonado del hero — inset animado con steps(12) */
+    .story--sunset.is-portal .glass-window {
+      animation: peak-portal-cut 1.45s steps(12, end) both;
+    }
+
+    .story--sunset.is-portal .glass-beam {
+      animation: peak-portal-scan 1.45s steps(12, end) both;
+    }
+
+    @keyframes peak-portal-cut {
+      from {
+        clip-path: inset(-6% 100% -6% -2% round calc(24 * var(--u)));
+      }
+
+      to {
+        clip-path: inset(-6% 0% -6% -2% round calc(24 * var(--u)));
+      }
+    }
+
+    /* el haz viaja con el borde: left animado en % del ancho de la
+       ventana, como el portal-scan del hero (offset propio, no translate) */
+    @keyframes peak-portal-scan {
+      0% {
+        left: -4%;
+        opacity: 0;
+      }
+
+      10% {
+        opacity: .75;
+      }
+
+      88% {
+        opacity: .75;
+      }
+
+      100% {
+        left: 100%;
+        opacity: 0;
+        visibility: hidden;
+
+      }
+    }
+
+    /* reduced-motion: story.js no crea el trigger (return temprano), así
+       que .is-portal nunca llega — la ventana debe quedar ABIERTA y quieta,
+      si no, el usuario nunca vería la imagen. */
+    @media (prefers-reduced-motion: reduce) {
+      .js .story--sunset .glass-window {
+        clip-path: none;
+      }
+
+      .story--sunset .glass-beam {
+        display: none;
+      }
+    }
+
+    /* distribución vertical de la columna visual: el stack imagen+pie
+       se auto-centra; el glow cálido queda detrás */
+    .story--sunset .glass-figure {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    @media (min-width:901px) {
+      /* UN solo panel de vidrio centrado en la página: cabecera editorial
+         (badge + titular) centrada arriba a todo lo ancho, y debajo la
+         rejilla voz izquierda / imagen protagonista derecha. */
+      .story--sunset .story-inner {
+        width: min(calc(1216 * var(--u)), calc(100% - 2 * max(24px, calc(46 * var(--u)))));
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+      }
+
+      .story--sunset .glass-card {
+        display: grid;
+        grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+        /* row-gap menor: la cabecera centrada no necesita el aire de 56u
+           que separa las dos columnas de contenido */
+        gap: calc(32 * var(--u)) calc(56 * var(--u));
+        align-items: center;
+        width: 100%;
+        padding: calc(40 * var(--u)) calc(60 * var(--u)) calc(44 * var(--u));
+      }
+
+      /* cabecera a sangre del panel, centrada (badge pill + titular);
+         el badge ya es inline-block en la base — text-align lo centra */
+      .story--sunset .glass-head {
+        grid-column: 1 / -1;
+        text-align: center;
+      }
+
+      /* jerarquía editorial dentro del panel: la IMAGEN es la protagonista,
+         la voz se subordina (h2 menor que el 54u de las secciones editoriales,
+         checklist compacto) para que el panel complete quepa en 100svh —
+         si la columna de voz crece, el sticky overflow corta el panel. */
+      .story--sunset .glass-head h2 {
+        margin-top: calc(18 * var(--u));
+        font-size: calc(40 * var(--u));
+        line-height: calc(46 * var(--u));
+      }
+
+      .story--sunset .glass-sub {
+        margin-top: calc(10 * var(--u));
+        font-size: calc(16 * var(--u));
+        line-height: calc(23 * var(--u));
+      }
+
+      .story--sunset .story-about {
+        margin-top: calc(24 * var(--u));
+        padding: calc(26 * var(--u)) calc(30 * var(--u));
+        border-radius: calc(24 * var(--u));
+      }
+
+      .story--sunset .story-about ul {
+        margin-top: calc(14 * var(--u));
+        gap: calc(10 * var(--u));
+      }
+
+      .story--sunset .story-about li {
+        font-size: calc(15 * var(--u));
+        line-height: calc(21 * var(--u));
+      }
+
+      .story--sunset .story-about h3 {
+        font-size: calc(17 * var(--u));
+      }
+
+      .story--sunset .visitar-cta {
+        margin-top: calc(28 * var(--u));
+      }
+
+      .story--sunset .glass-figure {
+        height: auto;
+      }
+
+      .story--sunset .glass-peak {
+        width: 100%;
+        margin-left: 0;
+      }
+    }
+
+    /* CTA: la pill liquid-metal del hero, reutilizada. .pill es absolute
+       (posición del hero); aquí va en flujo bajo el panel. */
+    .visitar-cta {
+      position: static;
+      inset: auto;
+      margin-top: calc(36 * var(--u));
+      width: max-content;
+      max-width: 100%;
+      --mr: calc(62 * var(--u));   /* radio del reveal mask, como un knob grande */
+    }
+
+    .visitar-cta .liquid-stage--explore {
+      /* misma escala que el hero: es la pieza que cierra el recorrido.
+         --pad menor que el default (900): en el hero ese padding es lienzo
+         invisible del FX (el .pill es absolute); aquí el CTA está en flujo
+         y 900*lu lo inflaba a 270px de alto. 400*lu conserva ~47px de
+         aire para los splashes del liquid sin deformar el layout. */
+      --h: calc(60.156 * var(--u));
+      --pad: calc(400 * var(--lu));
+    }
+
+    .visitar-cta .liquid-button--explore {
+      padding: 0 calc(224 * var(--lu)) 0 calc(95 * var(--lu));
+      gap: calc(112 * var(--lu));
+      font-size: calc(140 * var(--lu));
+    }
+
+    .visitar-cta .liquid-button--explore .ico {
+      width: calc(150 * var(--lu));
+      height: calc(150 * var(--lu));
+    }
+
+    @media (max-width:900px) {
+      .visitar-cta .liquid-stage--explore {
+        --h: calc(46 * var(--u));
+      }
+
+      .visitar-cta {
+        margin-top: calc(28 * var(--u));
+      }
+    }
+
+    /* reduced-motion: el liquid-metal ya respeta reduced-motion interno;
+       aquí solo congelamos el reveal del CTA */
+    @media (prefers-reduced-motion: reduce) {
+      .visitar-cta {
+        clip-path: none !important;
+        transition: none !important;
+      }
+    }
+
+    /* ── Modal de video (play del hero → ibague-adentrate.mp4) ──────────
+       Motor: js/video-modal.js. <dialog> nativo: Esc y focus-trap gratis.
+       Mismo idioma glass del sitio: vidrio oscuro, hairline rgba(255,255,255,.15),
+       blur, radio y --ease-out. Todo el tamaño via --u + min() = responsive
+       sin media queries; object-fit:contain garantiza 16:9 sin deformar. */
+    .video-modal {
+      padding: 0;
+      border: none;
+      background: none;
+      overscroll-behavior: contain;
+    }
+
+    .video-modal[open] {
+      display: grid;
+      place-items: center;
+      width: 100vw;
+      height: 100dvh;
+      max-width: none;
+      max-height: none;
+    }
+
+    /* Overlay: oscurece el sitio detrás (el diálogo ocupa todo el viewport,
+       así que cualquier click que no caiga en el frame es click-fuera). */
+    .video-modal::backdrop {
+      background: rgba(4, 8, 6, .72);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .video-modal[open],
+      .video-modal[open]::backdrop {
+        animation: video-modal-in .32s var(--ease-out);
+      }
+
+      .video-modal[open]::backdrop {
+        animation-name: video-modal-scrim;
+      }
+
+      .video-modal[open]::backdrop {
+        animation-name: video-modal-scrim;
+      }
+    }
+
+    .video-modal__frame {
+      position: relative;
+      width: min(calc(1120 * var(--u)), calc(100vw - 32px));
+      max-height: calc(100dvh - 32px);
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: calc(24 * var(--u));
+      background: rgba(20, 26, 22, .55);
+      box-shadow: 0 32px 80px rgba(0, 0, 0, .5);
+      overflow: hidden;
+    }
+
+    .video-modal__frame video {
+      display: block;
+      width: 100%;
+      max-height: calc(100dvh - 32px);
+      aspect-ratio: 1276 / 720;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .video-modal__close {
+      position: absolute;
+      z-index: 60;
+      top: calc(10 * var(--u));
+      right: calc(10 * var(--u));
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 50%;
+      background: rgba(10, 14, 12, .55);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      color: rgba(255, 255, 255, .9);
+      cursor: pointer;
+      transition: background .2s var(--ease-out);
+    }
+
+    .video-modal__close:hover {
+      background: rgba(10, 14, 12, .8);
+    }
+
+    .video-modal__close svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    @keyframes video-modal-in {
+      from {
+        opacity: 0;
+        transform: translateY(calc(24 * var(--u)));
+      }
+    }
+
+    @keyframes video-modal-scrim {
+      from {
+        opacity: 0;
+      }
+    }
