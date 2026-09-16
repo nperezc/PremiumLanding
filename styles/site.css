@@ -1401,6 +1401,10 @@
         top: calc(1050 * var(--u));
         width: calc(692 * var(--u));
         height: calc(250 * var(--u));
+        /* sobre la raíz de musgo (#scene z3): en desktop el musgo cae sobre
+           su hombro y lee bien, pero en una columna la raíz tapa la foto y
+           el texto de la card — sube al mismo plano delante que el EcoTour */
+        z-index: 4;
       }
 
       .card--about .label {
@@ -1409,7 +1413,9 @@
 
       .card--about h2 {
         top: calc(124 * var(--u));
-        width: calc(400 * var(--u));
+        /* el left base (38u) es en espacio de la card: la ventana empieza
+           en 376u (card) → 38+328=366u deja ~10u de aire antes de la foto */
+        width: calc(328 * var(--u));
         font-size: calc(32 * var(--u));
         line-height: calc(36 * var(--u));
       }
@@ -1439,8 +1445,11 @@
         left: auto;
         right: calc(16 * var(--u));
         top: calc(16 * var(--u));
-        width: calc(224 * var(--u));
-        height: calc(218 * var(--u));
+        /* misma ventana que la del EcoTour (300×150u): ambas cards con foto
+           de proporción idéntica — antes esta era casi cuadrada (224×218u).
+           El h2 (34+360=394u) no invade: la ventana empieza en 444u. */
+        width: calc(300 * var(--u));
+        height: calc(150 * var(--u));
       }
 
       .card .knob {
