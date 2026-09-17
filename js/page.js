@@ -49,6 +49,8 @@
       }
 
       var lastTick = 0;
+      var glFrameGap = 0;   /* ms mínimos entre renders GL (0 = sin tope) */
+      var glLast = 0;
       function tick() {
         var now = performance.now();
         var dtUI = lastTick ? Math.min((now - lastTick) / 1000, 0.05) : 0.016;
@@ -76,8 +78,13 @@
         }
         /* el render GL solo corre con el hero en pantalla: es la única parte
            que redibuja cada frame; scrolleado a las secciones story el loop
-           queda en repo (el IO restaura al volver arriba) */
-        if (renderer && clock && heroVisible) renderFrame();
+           queda en repo (el IO restaura al volver arriba). En móvil además
+           se topa a ~30fps: la escena (mariposa, musgo ondulante) es de
+           movimiento lento y el doble de frames no se percibe — la GPU
+           móvil rinde el doble en el hero. */
+        if (renderer && clock && heroVisible) {
+          if (!glFrameGap || now - glLast >= glFrameGap) { renderFrame(); glLast = now; }
+        }
       }
 
       function startParallax() {
@@ -1704,6 +1711,9 @@
       function build() {
         var narrow = NARROW.matches;
         var small = narrow || (window.innerWidth * window.innerHeight) < 620000;
+        /* cap de fps compartido con el loop UI: en móvil 30fps bastan para
+           el movimiento lento de mariposa/ramas y ahorra ~50% de GPU */
+        glFrameGap = small ? 33 : 0;
         var BLADES_NEAR = small ? 70000 : 190000;
         var BLADES_FAR = small ? 20000 : 60000;
 
