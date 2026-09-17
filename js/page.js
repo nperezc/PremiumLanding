@@ -126,7 +126,7 @@
       var FAR = { w: 1150, left: -40, top: 320, aspect: 1600 / 757, z: -260 };
       var FAR_N = { w: 780, left: -110, top: 600, aspect: 1600 / 757, z: -260 };
 
-      var renderer, scene, camera;
+      var renderer, scene, camera, bfFitQueued = false;
       var nearGroup, farGroup, motes, shadowMesh, glowMesh;
       var W = 1, H = 1, DIST = 1400;
       var poleTex = null;
@@ -1749,7 +1749,13 @@
           mouse: uMouseNear, mouseR: 1.20
         });
         scene.add(nearGroup);
-        if (!small) bf = buildButterfly(nearGroup, nearLimbs, nearGroup.userData.uni);
+        /* la mariposa también en móvil: es geometría propia (~10 draw calls,
+           sin costo por resolución) y su vuelo vive en unidades locales de la
+           escena — la cámara narrow la enmarca igual. La escalamos más en móvil
+           porque el mismo tamaño local rinde menos píxeles en un viewport
+           angosto (~8px vs ~32px en desktop). Solo la saltamos si el contexto
+           WebGL no existe (catch de boot). */
+        bf = buildButterfly(nearGroup, nearLimbs, nearGroup.userData.uni, small ? 0.5 : 0.205);
 
         /* ---- far ridge: same builder, pushed back and washed into the air.
                 It dissolves before it reaches the cards (local x 0.5 → 4.0) and
@@ -2200,7 +2206,7 @@
         });
       }
 
-      function buildButterfly(host, limbs, uni) {
+      function buildButterfly(host, limbs, uni, bfScale) {
         var group = new THREE.Group();
         var bend = { fore: { value: 0 }, hind: { value: 0 } };
         var tex = wingTexture();
@@ -2296,8 +2302,10 @@
         })();
 
         /* a good deal smaller than it was on the cherry bough — that scene framed
-           one branch, this one frames a whole root */
-        group.scale.setScalar(0.205);
+           one branch, this one frames a whole root. En móvil se compensa con una
+           escala mayor (mismo tamaño local rinde menos px en viewport angosto). */
+        group.scale.setScalar(bfScale || 0.205);
+        group.name = 'bfly';
         group.renderOrder = 5;
         group.traverse(function (o) { o.frustumCulled = false; });
         host.add(group);
@@ -2315,7 +2323,6 @@
           if (score > bestY) { bestY = score; perchTh = th; pp.copy(probeP); pn.copy(probeN); }
         }
         var perch = pp.clone().addScaledVector(pn, 0.16);   /* clear of the moss pile */
-
         var st = {
           pos: perch.clone().add(new THREE.Vector3(-1.0, 1.1, 0.5)),
           vel: new THREE.Vector3(0.5, 0, 0),
@@ -2323,31 +2330,52 @@
           tgt: new THREE.Vector3(),
           mode: 'cruise', timer: 4.0, settle: 0, bank: 0, flap: 0
         };
-        /* Local units, and the frame's left edge is at x = -4: a butterfly that
-           wanders off the side or drops behind the moss may as well not be there,
-           so the box is cut to the air directly above the crest. */
-        var BOX = {
-          x0: perch.x - 1.5, x1: perch.x + 2.1, y0: perch.y - 0.10, y1: perch.y + 1.35,
-          z0: perch.z - 0.25, z1: perch.z + 0.95
-        };
+        st.tgt.set(perch.x + 0.6, perch.y + 0.9, perch.z + 0.4);   /* pre-fit hover */
+        /* Local units. The box is cut to the air above the crest — a butterfly
+           that wanders off the side or drops behind the moss may as well not be
+           there. Se construye en fitFrame() y no antes: en móvil angosto la cima
+           (perch) proyecta fuera del borde y el box completo quedaría fuera de
+           cámara; layout() lo llama con la cámara ya medida y desliza el ancla
+           hacia lo visible. En desktop el perch ya está centrado: no-op. */
+        var BOX = null;
 
         function pickTarget() {
           st.tgt.set(rand(BOX.x0 + 0.3, BOX.x1 - 0.3), rand(perch.y + 0.35, BOX.y1 - 0.2), rand(BOX.z0 + 0.2, BOX.z1 - 0.15));
         }
-        pickTarget();
+
+        function fitFrame() {
+          if (BOX) return;
+          var v = new THREE.Vector3();
+          host.localToWorld(v.copy(perch));
+          v.project(camera);
+          if (v.x < -0.92) {
+            /* Δndc → unidades locales del root: Δworld = Δndc·W/2 (z≈0),
+               y el grupo vive escalado por host.scale */
+            var ls = host.scale.x || 1;
+            var dx = (-0.84 - v.x) * (W / 2) / ls;
+            perch.x += dx;
+            st.pos.x += dx;
+          }
+          BOX = {
+            x0: perch.x - 1.5, x1: perch.x + 2.1, y0: perch.y - 0.10, y1: perch.y + 1.35,
+            z0: perch.z - 0.25, z1: perch.z + 0.95
+          };
+          pickTarget();
+        }
 
         /* display pose: dorsal surface square to the camera, head up — the whole
            point of the landing is that the open wings are seen */
-        var landQ = new THREE.Quaternion();
-        (function () {
+        var landQ = (function () {
+          var q = new THREE.Quaternion();
           var camLocal = new THREE.Vector3(0, 0, DIST);
           host.worldToLocal(camLocal);
           var dorsal = camLocal.sub(perch).normalize();
           var fwd = new THREE.Vector3(0, 1, 0).addScaledVector(dorsal, -dorsal.y).normalize();
           var right = new THREE.Vector3().crossVectors(dorsal, fwd).normalize();
-          landQ.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, dorsal, fwd));
-          landQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.10));
-          landQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.14));
+          q.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, dorsal, fwd));
+          q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.10));
+          q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.14));
+          return q;
         })();
 
         /* The pointer is already carried into this group's local space every
@@ -2361,6 +2389,7 @@
         var AX_X = new THREE.Vector3(1, 0, 0), AX_Z = new THREE.Vector3(0, 0, 1);
 
         function contain(out) {
+          if (!BOX) return;                      /* until fitFrame runs, stay near the perch */
           var k = 2.2, m = 0.30;
           if (st.pos.x < BOX.x0 + m) out.x += k * (BOX.x0 + m - st.pos.x);
           if (st.pos.x > BOX.x1 - m) out.x -= k * (st.pos.x - BOX.x1 + m);
@@ -2370,7 +2399,7 @@
           if (st.pos.z > BOX.z1 - m) out.z -= k * (st.pos.z - BOX.z1 + m);
         }
 
-        return function update(dt, t) {
+        function update(dt, t) {
           /* ---- how close is the cursor, and from where ----
              z is weighted down because the pointer is resolved on one plane and
              the butterfly is not on it; what matters is whether the cursor is
@@ -2477,6 +2506,9 @@
           group.position.copy(st.pos);
           group.position.y += Math.sin(st.flap - 0.9) * 0.022 * (1 - st.settle);
         };
+
+        update.fitFrame = fitFrame;
+        return update;
       }
 
       /* ── size the scene in stage-pixel space ─────────────────────────────
@@ -2544,6 +2576,10 @@
           spray.material.uniforms.uScale.value = half;
           spray.material.uniforms.uSize.value = Math.max(7, 13 * u);
         }
+
+        /* el box de vuelo de la mariposa se ajusta tras el primer render, cuando
+           three ya dejó las matrices de cámara al día (no-op en desktop) */
+        bfFitQueued = true;
       }
 
       /* ── cursor → the plane the root stands in, in each root's own space ── */
@@ -2612,6 +2648,7 @@
         emitSpray(dt);
 
         renderer.render(scene, camera);
+        if (bfFitQueued && bf && bf.fitFrame) { bf.fitFrame(); bfFitQueued = false; }
         if (++frames === 2) window.__ready = true;
       }
 

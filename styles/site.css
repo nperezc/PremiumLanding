@@ -720,9 +720,17 @@
     }
 
     .card--stove h2 {
-      /* "Juntas, Villarestrepo / Cañón del Combeima" son 2 líneas (br):
-         el grupo sube para quedar íntegro sobre la foto del pie de card */
-      top: calc(56 * var(--u));
+      /* desktop: solo "Cañón del Combeima" — el lugar (Juntas, Villarestrepo)
+         se oculta y el br muere para que el titular quede en 1 línea */
+      top: calc(70 * var(--u));
+    }
+
+    .card--stove .stove-loc {
+      display: none;
+    }
+
+    .card--stove .stove-br {
+      display: none;
     }
 
     /* Both cards carry a plate. The Field Note reads downward — label, title,
@@ -1448,11 +1456,19 @@
 
       .card--stove h2 {
         font-size: calc(32 * var(--u));
-        /* "Juntas, Villarestrepo / Cañón del Combeima" a 2 líneas (br en el
-           markup): 375u de ancho para que la 1ª línea no reenvuelva — deja
-           ~30px de aire antes de la foto */
+        /* móvil: las DOS líneas visibles — el span del lugar se muestra aquí
+           (desktop lo oculta) y el br del markup parte el grupo */
         top: calc(124 * var(--u));
         width: calc(375 * var(--u));
+      }
+
+      .card--stove .stove-loc {
+        display: inline;
+      }
+
+      /* la base (desktop) mata el br; aquí vuelve para partir el titular */
+      .card--stove .stove-br {
+        display: inline;
       }
 
       /* one column: both plates become a thumbnail on the card's outer edge,
