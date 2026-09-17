@@ -1892,6 +1892,12 @@
         text-align: center;
       }
 
+      /* el eyebrow de la columna editorial (Nevado) acompaña al titular:
+         mismo eje central. #rutas conserva su header a la izquierda. */
+      #nevado .eyebrow {
+        text-align: center;
+      }
+
       .story-about {
         padding: calc(30 * var(--u)) calc(30 * var(--u));
       }
@@ -2102,6 +2108,13 @@
 
       .story--glass .glass-card {
         padding: calc(30 * var(--u)) calc(30 * var(--u));
+        /* badge + titular + lede centrados (jerarquía editorial del narrow);
+           el panel de datos vuelve a bloque para que los bullets no se centreen */
+        text-align: center;
+      }
+
+      .story--glass .glass-card .story-about {
+        text-align: left;
       }
 
       .story--glass .glass-foliage {
