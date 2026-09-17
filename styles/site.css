@@ -2434,9 +2434,13 @@
       }
 
       /* en columna flex, el align-self:flex-end de la regla base mueve el
-         lede a la derecha: se recentra al eje editorial común */
+         lede a la derecha: se recentra al eje editorial común. Y su base
+         flex 1 1 480u (ancho en desktop) se vuelve ALTO en columna:
+         caja fantasma de ~200px bajo el texto → se resetea. */
       #rutas .lede {
+        flex: 0 0 auto;
         align-self: center;
+        max-width: 100%;
       }
 
       .routes-grid {
