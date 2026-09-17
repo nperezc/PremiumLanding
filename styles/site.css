@@ -1868,6 +1868,12 @@
 
     /* ── narrow: the reference's editorial column stacks over the photo ── */
     @media (max-width:900px) {
+      /* lámina sin radio superior en teléfono: a pantalla completa las
+         esquinas curvas leen como recorte accidental, no como lámina */
+      .story {
+        border-radius: 0;
+      }
+
       .story-inner {
         grid-template-columns: 1fr;
         gap: calc(48 * var(--u));
