@@ -2421,6 +2421,24 @@
     }
 
     @media (max-width: 900px) {
+      /* header de rutas centrado en móvil: mismo eje editorial que Cañón
+         y Nevado (eyebrow/titular/lede al centro, apilados) */
+      #rutas .rise {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #rutas .rise .eyebrow,
+      #rutas .lede {
+        text-align: center;
+      }
+
+      /* en columna flex, el align-self:flex-end de la regla base mueve el
+         lede a la derecha: se recentra al eje editorial común */
+      #rutas .lede {
+        align-self: center;
+      }
+
       .routes-grid {
         grid-template-columns: 1fr !important;
         grid-auto-rows: 1fr !important;
